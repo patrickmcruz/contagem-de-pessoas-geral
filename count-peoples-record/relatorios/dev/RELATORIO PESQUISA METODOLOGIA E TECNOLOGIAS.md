@@ -10,25 +10,25 @@ O objetivo central desta pesquisa foi criar uma solução robusta para a contage
 
 A metodologia segue um pipeline de Visão Computacional de última geração, estruturado em cinco etapas principais:
 
-### A. Análise dos Dados de Entrada
+### 2.1. Análise dos Dados de Entrada
 O sistema foi validado utilizando uma base de vídeos com características de alta resolução, garantindo a precisão necessária para a detecção de pequenos detalhes:
 - **Resoluções**: Predominantemente 4K (3840x2160 pixels) e Full HD (1920x1080 pixels).
 - **Taxa de Quadros (FPS)**: Variável entre 26 e 58 FPS, permitindo testar a robustez do rastreador em diferentes dinâmicas de movimento.
 - **Duração**: Amostras de 7 a 23 segundos, focadas em fluxos intensos de passagem.
 
-### B. Detecção de Objetos (YOLOv11)
+### 2.2. Detecção de Objetos (YOLOv11)
 A primeira camada do sistema utiliza o modelo **YOLOv11** (You Only Look Once). Este modelo processa cada quadro do vídeo em busca da classe "pessoa". A escolha do YOLOv11 garante alta precisão e velocidade.
 
-### C. Extração de Características (Re-Identification)
+### 2.3. Extração de Características (Re-Identification)
 Para garantir que um indivíduo não seja contado duas vezes, aplicamos a rede **MobileNetV3 Large** para extrair "vetores de identidade" (embeddings) de cada pessoa detectada, funcionando como uma assinatura visual única.
 
-### D. Rastreador Estável (StableTracker)
+### 2.4. Rastreador Estável (StableTracker)
 O algoritmo utiliza **Similaridade de Cosseno** para comparar embeddings entre quadros. Implementamos uma lógica de **Merge (Fusão)** para manter a continuidade do ID mesmo após perdas momentâneas de detecção.
 
-### E. Estabilização e Contagem Confirmada
+### 2.5. Estabilização e Contagem Confirmada
 O contador global apenas incrementa após uma pessoa ser vista por um número mínimo de quadros consecutivos, filtrando ruídos e falsos positivos.
 
-### F. Processamento de Saída
+### 2.6. Processamento de Saída
 O vídeo final preserva o codec `mp4v`, dimensões e FPS originais, adicionando anotações de Bounding Boxes, IDs e uma barra de status com a contagem acumulada.
 
 ## 3. Tecnologias Escolhidas
@@ -49,7 +49,7 @@ O sistema foi otimizado para hardware de alto desempenho:
 ## 5. Resultados Obtidos
 
 
-### Amostra 01
+### 5.1. Amostra 01
 - **Arquivo**: `exemplo_3_pessoa_input.mp4` (14 segundos, 45.80 FPS). Resolução 2160 x 3840.
 - **Camera**: vídeo vertical capturado diretamente do Poco X7 Pro, com resolução 4K e 60fps.
 - **Detalhes do conteúdo**: Pessoa sentada na cadeira do escritório, sendo identificada e contabilizada pelo sistema. Camera se move e mostra rosto do camera-man e sistema registra corretamente. Camera se move e mostra pés do camera-man, que é identificado como uma nova pessoa e contabilizado. Uma nova pessoa sentada na cadeira é filmada e sistema contabiliza novamente. Camera sai rapidamente e retorno para a mesma pessoa, e sistema não registra novo indivíduo. Camera filma a mão do camera man a qual é contabilizada.
@@ -58,7 +58,8 @@ O sistema foi otimizado para hardware de alto desempenho:
 - **Precisão**: 5 pessoas únicas detectadas de 3 existentes.
 
 Os testes de validação apresentaram os seguintes indicadores:
-### Amostra 02
+
+### 5.2. Amostra 02
 - **Arquivo**: `exemplo_4_pessoa_input.mp4` (22 segundos, 26.26 FPS). Resolução 1920 x 1280.
 - **Camera**: vídeo horizontal capturado diretamente da webcam logitech c920s, com resolução 1080p e 30fps.
 - **Detalhes do conteúdo**: Pessoa em pé, sendo identificada e contabilizada pelo sistema. Pessoa sai rapidamente do quadro e entra novamente: sistema consegue identificar e contabilizar novamente. Pessoa sai do quadro por 5 segundos e entra novamente: sistema consegue identificar e contabilizar novamente. Pessoa sai rapidamente do quadro põe óculos e entra novamente: sistema identifica outro indivíduo. Pessoa de óculos sai do quadro e entra novamente: sistema consegue identificar e contabilizar novamente. Ao final duas pessoas entram no quadro e o sistema consegue identificar e contabilizar.
