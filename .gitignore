@@ -34,4 +34,5 @@ yolo11n.pt
 brain/
 
 # Videos
-count-peoples-record/data/
+count-peoples-record/input/
+count-peoples-record/output/
