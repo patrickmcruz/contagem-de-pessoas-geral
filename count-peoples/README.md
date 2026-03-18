@@ -1,4 +1,4 @@
-# Sistema de Contagem de Pessoas (Versão Profissional)
+# Sistema de Contagem de Pessoas
 
 Este diretório contém a implementação profissional e modular da contagem de pessoas com Re-Identificação.
 
@@ -11,13 +11,16 @@ O projeto utiliza uma arquitetura baseada em componentes, separando as responsab
 - **UI**: Processamento de vídeo e renderização de overlays.
 
 ## 🚀 Como Executar
-Garanta que possui as dependências instaladas (`ultralytics`, `torch`, `torchvision`, `pytest`).
+Garanta que possui as dependências instaladas (`pip install -r requirements.txt`).
 
-### Execução Principal
+### Execução Principal (Software Profissional)
 Para iniciar a detecção em tempo real via webcam com janela nativa OpenCV:
 ```bash
 python src/main.py
 ```
+
+### Ambiente de Pesquisa (Notebooks)
+Para prototipagem e testes rápidos, veja a pasta `notebooks/`.
 
 ### Execução de Testes
 Para garantir que a lógica de contagem está funcionando corretamente:
