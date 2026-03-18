@@ -1,0 +1,27 @@
+# Configuracoes Centrais da Aplicacao
+application:
+  enable_counting: true      # Se falso, desativa a contagem de pessoas unicas
+  show_status_bar: true      # Se falso, esconde o painel superior no video
+  device: "cuda"             # "cuda" para GPU (RTX 4090) ou "cpu"
+  use_half_precision: true   # Ativa FP16 para maior performance na GPU
+
+detection:
+  model_path: "yolo11x.pt"   # Caminho do modelo YOLO v11
+  confidence: 0.70           # Threshold de confianca minimo
+  imgsz: 1280                # Resolução de entrada no modelo
+  classes: [0]               # IDs das classes para detectar (0 = person)
+
+tracking:
+  reid_threshold: 0.82       # Sensibilidade do ReID (maior = mais restritivo)
+  merge_threshold: 0.90      # Threshold para mesclar trackers proximos
+  stability_frames: 25       # Quantos frames para confirmar um ID como estavel
+  blur_threshold: 100.0      # Threshold de variancia Laplacian para nitidez
+
+logging:
+  level: "DEBUG"             # Nivel de log: DEBUG, INFO, WARNING, ERROR
+  log_dir: "logs"            # Pasta de logs
+  filename: "execution.log"  # Nome do arquivo de log
+
+output:
+  fourcc: "mp4v"             # Codec de video (ex: mp4v, avc1)
+  default_filename: "output_processed.mp4"

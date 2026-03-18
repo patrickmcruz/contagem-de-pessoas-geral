@@ -1,0 +1,84 @@
+[2026-03-18 14:12:11.522] [INFO]| --- Iniciando Processamento de Video Gravado ---
+[2026-03-18 14:12:11.522] [INFO]| Entrada: input/exemplo_4_pessoa_input.mp4
+[2026-03-18 14:12:11.523] [INFO]| Saida: output/test_orientation_vertical_4.mp4
+[2026-03-18 14:12:11.523] [DEBUG]| Carregando detector yolo11x.pt (sz=1280)
+[2026-03-18 14:12:11.659] [WARNING]| --- [DETECTOR] GPU NÃO ENCONTRADA para YOLO! Usando CPU.
+[2026-03-18 14:12:11.746] [WARNING]| --- [REID] GPU NÃO ENCONTRADA. Usando CPU (Lento!)
+[2026-03-18 14:12:11.828] [INFO]| Propriedades do vídeo carregado: 1920x1080 @ 26.23 FPS
+[2026-03-18 14:12:11.830] [INFO]| Processamento iniciado. Aguarde a finalizacao...
+[2026-03-18 14:12:22.159] [WARNING]| 
+Processamento interrompido pelo usuario (KeyboardInterrupt).
+[2026-03-18 14:12:22.179] [INFO]| --- Processamento Finalizado ---
+[2026-03-18 14:12:22.179] [INFO]| Tempo Total de Execucao: 10.66 segundos
+[2026-03-18 14:12:22.179] [INFO]| Video salvo em: output/test_orientation_vertical_4.mp4
+[2026-03-18 14:12:22.179] [INFO]| Pessoas Unicas Confirmadas: 0
+[2026-03-18 14:34:54.026] [INFO]| --- Iniciando Processamento de Video Gravado ---
+[2026-03-18 14:34:54.026] [INFO]| Entrada: input/exemplo_4_pessoa_input.mp4
+[2026-03-18 14:34:54.026] [INFO]| Saida: output/test_orientation_vertical_5.mp4
+[2026-03-18 14:34:54.026] [DEBUG]| Carregando detector yolo11x.pt (sz=1280) no dispositivo cuda
+[2026-03-18 14:34:54.165] [ERROR]| Erro fatal na inicializacao dos componentes: Torch not compiled with CUDA enabled
+Traceback (most recent call last):
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\src\main.py", line 63, in main
+    detector = YOLODetector(
+               ^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\src\detectors\yolo_detector.py", line 16, in __init__
+    self.model.to(self.device)
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\module.py", line 1381, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\ultralytics\engine\model.py", line 856, in _apply
+    self = super()._apply(fn)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\ultralytics\nn\tasks.py", line 288, in _apply
+    self = super()._apply(fn)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\module.py", line 964, in _apply
+    param_applied = fn(param)
+                    ^^^^^^^^^
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\module.py", line 1367, in convert
+    return t.to(
+           ^^^^^
+  File "C:\Users\patrickcruz\AppData\Roaming\Python\Python312\site-packages\torch\cuda\__init__.py", line 417, in _lazy_init
+    raise AssertionError("Torch not compiled with CUDA enabled")
+AssertionError: Torch not compiled with CUDA enabled
+[2026-03-18 14:41:07.228] [INFO]| --- Iniciando Processamento de Video Gravado ---
+[2026-03-18 14:41:07.228] [INFO]| Entrada: input/exemplo_4_pessoa_input.mp4
+[2026-03-18 14:41:07.229] [INFO]| Saida: output/test_orientation_vertical_6.mp4
+[2026-03-18 14:41:07.229] [DEBUG]| Carregando detector yolo11x.pt (sz=1280) no dispositivo cuda
+[2026-03-18 14:41:07.533] [INFO]| --- [DETECTOR] GPU Ativada para YOLO: NVIDIA GeForce RTX 4090
+[2026-03-18 14:41:07.533] [INFO]| --- [DETECTOR] Usando Half Precision (FP16)
+[2026-03-18 14:41:07.669] [INFO]| --- [REID] GPU Ativada para Processamento: NVIDIA GeForce RTX 4090
+[2026-03-18 14:41:07.669] [INFO]| --- [REID] Usando Half Precision (FP16)
+[2026-03-18 14:41:07.761] [INFO]| Propriedades do vídeo carregado: 1920x1080 @ 26.23 FPS
+[2026-03-18 14:41:07.763] [INFO]| Processamento iniciado. Aguarde a finalizacao...
+[2026-03-18 14:41:10.596] [INFO]| Progresso: 5.0% (30/598)
+[2026-03-18 14:41:12.801] [INFO]| Progresso: 10.0% (60/598)
+[2026-03-18 14:41:15.353] [INFO]| Progresso: 15.1% (90/598)
+[2026-03-18 14:41:17.420] [INFO]| Progresso: 20.1% (120/598)
+[2026-03-18 14:41:18.653] [INFO]| Progresso: 25.1% (150/598)
+[2026-03-18 14:41:19.900] [INFO]| Progresso: 30.1% (180/598)
+[2026-03-18 14:41:21.139] [INFO]| Progresso: 35.1% (210/598)
+[2026-03-18 14:41:23.279] [INFO]| Progresso: 40.1% (240/598)
+[2026-03-18 14:41:25.954] [INFO]| Progresso: 45.2% (270/598)
+[2026-03-18 14:41:28.601] [INFO]| Progresso: 50.2% (300/598)
+[2026-03-18 14:41:31.325] [INFO]| Progresso: 55.2% (330/598)
+[2026-03-18 14:41:34.753] [INFO]| Progresso: 60.2% (360/598)
+[2026-03-18 14:41:37.925] [INFO]| Progresso: 65.2% (390/598)
+[2026-03-18 14:41:40.846] [INFO]| Progresso: 70.2% (420/598)
+[2026-03-18 14:41:43.090] [INFO]| Progresso: 75.3% (450/598)
+[2026-03-18 14:41:45.229] [INFO]| Progresso: 80.3% (480/598)
+[2026-03-18 14:41:48.286] [INFO]| Progresso: 85.3% (510/598)
+[2026-03-18 14:41:53.487] [INFO]| Progresso: 90.3% (540/598)
+[2026-03-18 14:41:59.924] [INFO]| Progresso: 95.3% (570/598)
+[2026-03-18 14:42:05.603] [INFO]| --- Processamento Finalizado ---
+[2026-03-18 14:42:05.603] [INFO]| Tempo Total de Execucao: 58.38 segundos
+[2026-03-18 14:42:05.603] [INFO]| Video salvo em: output/test_orientation_vertical_6.mp4
+[2026-03-18 14:42:05.603] [INFO]| Pessoas Unicas Confirmadas: 5
