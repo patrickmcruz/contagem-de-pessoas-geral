@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+count-peoples/.venv/
+
+# ML Models & Weights (Large files)
+*.pt
+*.pth
+*.onnx
+*.weights
+yolo11n.pt
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+.gemini/
+.agents/
+.agent/
+brain/
