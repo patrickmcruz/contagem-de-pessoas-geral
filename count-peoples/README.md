@@ -1,53 +1,31 @@
-# Contagem de Pessoas com YOLOv11
+# Sistema de Contagem de Pessoas (Versão Profissional)
 
-Este projeto utiliza o estado da arte em visão computacional para realizar a detecção de pessoas em tempo real através da webcam, otimizado para rodar em GPUs NVIDIA.
+Este diretório contém a implementação profissional e modular da contagem de pessoas com Re-Identificação.
 
-## 🚀 Tecnologias Utilizadas
+## 🏗️ Arquitetura Modular
+O projeto utiliza uma arquitetura baseada em componentes, separando as responsabilidades em:
+- **Core**: Interfaces base para extensibilidade.
+- **Detectors**: Implementação YOLOv11n para detecção rápida.
+- **ReID**: Extração de assinaturas visuais via MobileNetV3.
+- **Tracking**: Lógica de estabilidade e fusão de identidades.
+- **UI**: Processamento de vídeo e renderização de overlays.
 
-- **Python 3.10+**
-- **YOLOv11** (via biblioteca `ultralytics`)
-- **PyTorch** (com suporte a CUDA)
-- **OpenCV** (para captura e exibição de vídeo)
+## 🚀 Como Executar
+Garanta que possui as dependências instaladas (`ultralytics`, `torch`, `torchvision`, `pytest`).
 
-## 💻 Requisitos de Hardware (Ref. do Usuário)
-
-- **GPU:** NVIDIA RTX 1660 Super (8GB)
-- **CPU:** AMD Ryzen 5 3600
-- **RAM:** 16GB
-
-## 🛠️ Instalação e Configuração
-
-### 1. Clonar o repositório (ou baixar os arquivos)
+### Execução Principal
+Para iniciar a detecção em tempo real via webcam com janela nativa OpenCV:
 ```bash
-git clone https://github.com/patrickmcruz/contagem-de-pessoas.git
-cd contagem-de-pessoas
+python src/main.py
 ```
 
-### 2. Instalar dependências básicas
+### Execução de Testes
+Para garantir que a lógica de contagem está funcionando corretamente:
 ```bash
-pip install ultralytics opencv-python torch torchvision
+python -m pytest tests/unit/test_tracker.py
 ```
 
-### 3. Ativar Suporte a GPU (NVIDIA)
-Para garantir que o PyTorch utilize sua RTX 1660 Super, instale a versão com suporte a CUDA:
-```bash
-pip uninstall torch torchvision torchaudio -y
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-```
-
-## 📖 Como Usar
-
-1. Abra o arquivo [object_detection.ipynb](object_detection.ipynb) no VS Code ou Jupyter Notebook.
-2. Execute as células em ordem.
-3. A janela da câmera abrirá focando apenas na classe `person`.
-4. Pressione a tecla **'q'** para fechar a janela e encerrar o script.
-
-## ⚠️ Troubleshooting (Problemas Comuns)
-
-### Erro: `ValueError: numpy.dtype size changed`
-Este erro ocorre devido à incompatibilidade com o NumPy 2.0. Para corrigir:
-1. Execute: `pip install "numpy<2"`
-2. **Reinicie o Kernel** do seu notebook/editor.
-
----
-Desenvolvido como um exemplo de Visão Computacional de alta performance.
+## 🧠 Lógica de Contagem Estável
+1. **Filtro de Estabilidade**: Apenas pessoas vistas por 20 frames consecutivos são contadas no total geral.
+2. **Re-Identificação (Re-ID)**: Utiliza similaridade de cosseno (threshold 0.72) para reconhecer pessoas que saem e voltam.
+3. **ID Merging**: Se um novo ID for criado mas for muito parecido com um já existente (merge threshold 0.82), os IDs são fundidos retroativamente para manter o contador preciso.
