@@ -82,3 +82,39 @@ AssertionError: Torch not compiled with CUDA enabled
 [2026-03-18 14:42:05.603] [INFO]| Tempo Total de Execucao: 58.38 segundos
 [2026-03-18 14:42:05.603] [INFO]| Video salvo em: output/test_orientation_vertical_6.mp4
 [2026-03-18 14:42:05.603] [INFO]| Pessoas Unicas Confirmadas: 5
+[2026-03-18 15:36:24.022] [INFO]| --- Iniciando Processamento de Video Gravado ---
+[2026-03-18 15:36:24.023] [INFO]| Entrada: input/exemplo_3_pessoa_input.mp4
+[2026-03-18 15:36:24.023] [INFO]| Saida: output/exemplo_3_pessoa_output_2.mp4
+[2026-03-18 15:36:24.023] [DEBUG]| Carregando detector yolo11x.pt (sz=1280) no dispositivo cuda
+[2026-03-18 15:36:24.326] [INFO]| --- [DETECTOR] GPU Ativada para YOLO: NVIDIA GeForce RTX 4090
+[2026-03-18 15:36:24.326] [INFO]| --- [DETECTOR] Usando Half Precision (FP16)
+[2026-03-18 15:36:24.463] [INFO]| --- [REID] GPU Ativada para Processamento: NVIDIA GeForce RTX 4090
+[2026-03-18 15:36:24.463] [INFO]| --- [REID] Usando Half Precision (FP16)
+[2026-03-18 15:36:24.501] [INFO]| Propriedades do vídeo carregado: 2160x3840 @ 45.80 FPS
+[2026-03-18 15:36:24.506] [INFO]| Processamento iniciado. Aguarde a finalizacao...
+[2026-03-18 15:36:29.157] [INFO]| Progresso: 4.5% (30/669)
+[2026-03-18 15:36:34.265] [INFO]| Progresso: 9.0% (60/669)
+[2026-03-18 15:36:39.614] [INFO]| Progresso: 13.5% (90/669)
+[2026-03-18 15:36:43.774] [INFO]| Progresso: 17.9% (120/669)
+[2026-03-18 15:36:48.894] [INFO]| Progresso: 22.4% (150/669)
+[2026-03-18 15:36:52.350] [INFO]| Progresso: 26.9% (180/669)
+[2026-03-18 15:36:56.528] [INFO]| Progresso: 31.4% (210/669)
+[2026-03-18 15:37:00.730] [INFO]| Progresso: 35.9% (240/669)
+[2026-03-18 15:37:04.613] [INFO]| Progresso: 40.4% (270/669)
+[2026-03-18 15:37:09.179] [INFO]| Progresso: 44.8% (300/669)
+[2026-03-18 15:37:14.238] [INFO]| Progresso: 49.3% (330/669)
+[2026-03-18 15:37:19.923] [INFO]| Progresso: 53.8% (360/669)
+[2026-03-18 15:37:25.111] [INFO]| Progresso: 58.3% (390/669)
+[2026-03-18 15:37:30.546] [INFO]| Progresso: 62.8% (420/669)
+[2026-03-18 15:37:34.283] [INFO]| Progresso: 67.3% (450/669)
+[2026-03-18 15:37:37.953] [INFO]| Progresso: 71.7% (480/669)
+[2026-03-18 15:37:44.127] [INFO]| Progresso: 76.2% (510/669)
+[2026-03-18 15:37:51.300] [INFO]| Progresso: 80.7% (540/669)
+[2026-03-18 15:37:57.539] [INFO]| Progresso: 85.2% (570/669)
+[2026-03-18 15:38:03.404] [INFO]| Progresso: 89.7% (600/669)
+[2026-03-18 15:38:11.125] [INFO]| Progresso: 94.2% (630/669)
+[2026-03-18 15:38:15.459] [INFO]| Progresso: 98.7% (660/669)
+[2026-03-18 15:38:16.624] [INFO]| --- Processamento Finalizado ---
+[2026-03-18 15:38:16.624] [INFO]| Tempo Total de Execucao: 112.60 segundos
+[2026-03-18 15:38:16.624] [INFO]| Video salvo em: output/exemplo_3_pessoa_output_2.mp4
+[2026-03-18 15:38:16.624] [INFO]| Pessoas Unicas Confirmadas: 5
