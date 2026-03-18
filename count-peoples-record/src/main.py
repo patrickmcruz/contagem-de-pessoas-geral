@@ -11,6 +11,12 @@ from src.reid.mobilenet_reid import MobileNetReID
 from src.tracking.stable_tracker import StableTracker
 from src.ui.processor import LiveProcessor
 
+
+def _should_rotate_frame(width, height):
+    """Retorna True se vídeo é vertical (height > width)."""
+    return height > width
+
+
 def main():
     parser = argparse.ArgumentParser(description="Sistema de Contagem de Pessoas em Video Gravado")
     parser.add_argument("--input", type=str, required=True, help="Caminho para o arquivo de video de entrada")
@@ -38,12 +44,21 @@ def main():
         print(f"Erro: Nao foi possivel abrir o video {args.input}")
         return
 
-    # 3. Configuração do VideoWriter
+    # 3. Detectar orientação e configurar saída
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
+    
+    is_vertical = _should_rotate_frame(width, height)
+    if is_vertical:
+        print(f"Video detectado como VERTICAL ({height}x{width})")
+        output_width, output_height = height, width  # Mantém proporção vertical
+    else:
+        print(f"Video detectado como HORIZONTAL ({width}x{height})")
+        output_width, output_height = width, height
+    
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(args.output, fourcc, fps, (width, height))
+    out = cv2.VideoWriter(args.output, fourcc, fps, (output_width, output_height))
 
     print("Processando... Aguarde a finalizacao.")
     
@@ -56,8 +71,16 @@ def main():
             if not success:
                 break
             
+            # Se vídeo é vertical, rotacionar para processar
+            if is_vertical:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            
             # 4. Processamento Orquestrado
             annotated_frame = processor.process_frame(frame)
+            
+            # Se foi rotacionado, rotacionar de volta
+            if is_vertical:
+                annotated_frame = cv2.rotate(annotated_frame, cv2.ROTATE_90_CLOCKWISE)
             
             # 5. Salvar Frame
             out.write(annotated_frame)
