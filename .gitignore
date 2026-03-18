@@ -12,6 +12,7 @@ venv/
 ENV/
 env/
 count-peoples/.venv/
+count-peoples-record/.venv/
 
 # ML Models & Weights (Large files)
 *.pt
@@ -31,3 +32,6 @@ yolo11n.pt
 .agents/
 .agent/
 brain/
+
+# Videos
+count-peoples-record/data/
