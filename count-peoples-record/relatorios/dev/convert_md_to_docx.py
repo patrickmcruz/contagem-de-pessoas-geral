@@ -121,6 +121,6 @@ def process_formatting(paragraph, text):
                     paragraph.add_run(subpart)
 
 if __name__ == "__main__":
-    md_file = r"c:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\relatorios\relatorio_contagem_pessoas.md"
-    docx_file = r"c:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\relatorios\relatorio_contagem_pessoas.docx"
+    md_file = r"c:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\relatorios\dev\RELATORIO PESQUISA METODOLOGIA E TECNOLOGIAS.md"
+    docx_file = r"c:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\relatorios\dev\RELATORIO PESQUISA METODOLOGIA E TECNOLOGIAS.docx"
     convert_md_to_docx(md_file, docx_file)
