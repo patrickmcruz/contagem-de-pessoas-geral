@@ -6,7 +6,9 @@ This module provides a decoupled, independent preprocessor (`RGBTImageEqualizer`
 to perform pixel-level layer alignment (co-registration) between RGB and Thermal image pairs.
 
 Key Capabilities:
+- Lens Undistortion Correction (`undistort_lens`): Corrects Wide 24mm lens barrel distortion.
 - Precise FOV Aspect-Ratio Matching (Corrects 4:3 vs 5:4 sensor aspect ratio mismatch eliminating lateral shearing/squeeze).
+- Ground-Plane ROI Focused Co-registration: Prioritizes pedestrian surface alignment over rooftop parallax.
 - Fine-tuning Translation Offsets (`shift_rgb_x`, `shift_rgb_y`) applied strictly to RGB image.
 - Aspect Ratio Preservation with Letterbox Padding.
 - Robust Partial Affine Co-registration with Sanity Checks (Scale & Translation bounds).
@@ -35,6 +37,7 @@ class RGBTImageEqualizer:
         clahe_clip_limit: Threshold limit for contrast limiting in CLAHE.
         clahe_tile_grid: Grid size for histogram equalization (e.g. (8, 8)).
         fov_crop_ratio: Center crop height ratio for Wide RGB matching Thermal FOV (default 0.70 / 70%).
+        undistort_lens: If True, corrects Wide lens radial barrel distortion.
         shift_rgb_x: Horizontal shift in pixels applied strictly to RGB image (negative = left).
         shift_rgb_y: Vertical shift in pixels applied strictly to RGB image (negative = up).
         mode: Alignment mode ("homography", "affine", or "crop").
@@ -48,6 +51,7 @@ class RGBTImageEqualizer:
         clahe_clip_limit: float = 2.5,
         clahe_tile_grid: Tuple[int, int] = (8, 8),
         fov_crop_ratio: float = 0.70,
+        undistort_lens: bool = True,
         shift_rgb_x: int = -5,
         shift_rgb_y: int = -2,
         mode: str = "homography",
@@ -61,6 +65,7 @@ class RGBTImageEqualizer:
             clahe_clip_limit: CLAHE clip limit.
             clahe_tile_grid: CLAHE tile grid dimensions tuple.
             fov_crop_ratio: Wide RGB center crop height ratio matching Thermal HFOV (default 0.70).
+            undistort_lens: Corrects 24mm Wide lens barrel distortion.
             shift_rgb_x: Direct horizontal shift in pixels for RGB (default -5px left).
             shift_rgb_y: Direct vertical shift in pixels for RGB (default -2px up).
             mode: Alignment mode ("homography", "affine", or "crop").
@@ -71,6 +76,7 @@ class RGBTImageEqualizer:
         self.clahe_clip_limit = clahe_clip_limit
         self.clahe_tile_grid = clahe_tile_grid
         self.fov_crop_ratio = fov_crop_ratio
+        self.undistort_lens = undistort_lens
         self.shift_rgb_x = shift_rgb_x
         self.shift_rgb_y = shift_rgb_y
         self.mode = mode.lower()
@@ -80,6 +86,26 @@ class RGBTImageEqualizer:
             if self.thermal_clahe
             else None
         )
+
+    def _undistort_wide_lens(self, rgb_img: np.ndarray) -> np.ndarray:
+        """Applies radial lens undistortion correction to Wide 24mm optical sensor.
+
+        Args:
+            rgb_img: Input raw BGR NumPy array image.
+
+        Returns:
+            Undistorted BGR NumPy array image.
+        """
+        if not self.undistort_lens:
+            return rgb_img
+
+        h, w = rgb_img.shape[:2]
+        K = np.array(
+            [[w * 0.8, 0, w / 2], [0, h * 0.8, h / 2], [0, 0, 1]], dtype=np.float32
+        )
+        dist_coeffs = np.array([-0.04, 0.01, 0, 0], dtype=np.float32)
+
+        return cv2.undistort(rgb_img, K, dist_coeffs)
 
     def _fov_center_crop(
         self, rgb_img: np.ndarray, thermal_img: np.ndarray | None = None, crop_ratio: float | None = None
@@ -95,7 +121,9 @@ class RGBTImageEqualizer:
             Aspect-ratio matched center-cropped RGB BGR NumPy array image.
         """
         ratio = crop_ratio if crop_ratio is not None else self.fov_crop_ratio
-        h_rgb, w_rgb = rgb_img.shape[:2]
+        rgb_prep = self._undistort_wide_lens(rgb_img)
+
+        h_rgb, w_rgb = rgb_prep.shape[:2]
 
         # Target aspect ratio: match target_w / target_h (or thermal_img aspect ratio)
         if thermal_img is not None:
@@ -116,7 +144,7 @@ class RGBTImageEqualizer:
         left = (w_rgb - crop_w) // 2
         top = (h_rgb - crop_h) // 2
 
-        return rgb_img[top : top + crop_h, left : left + crop_w].copy()
+        return rgb_prep[top : top + crop_h, left : left + crop_w].copy()
 
     def align_homography(
         self, rgb_img: np.ndarray, thermal_img: np.ndarray
