@@ -284,7 +284,13 @@ class YOLOModelHandler(DEFModelHandler):
                 pass
         super().load_model()
 
-    def predict_batch(self, frames: list[np.ndarray], **kwargs: Any) -> list[Any]:  # type: ignore[override]
+    def predict_batch(  # type: ignore[override]
+        self,
+        rgb_frames: list[np.ndarray],
+        thermal_frames: list[np.ndarray] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
+        """Adapter forwarding legacy predict_batch calls."""
         if (
             self.model is not None
             and hasattr(self.model, "predict")
@@ -292,7 +298,7 @@ class YOLOModelHandler(DEFModelHandler):
         ):
             try:
                 with torch.inference_mode():
-                    return list(self.model.predict(source=frames, **self.predict_args))
+                    return list(self.model.predict(source=rgb_frames, **self.predict_args))
             except Exception:
                 pass
-        return super().predict_batch(frames, thermal_frames=None)
+        return super().predict_batch(rgb_frames, thermal_frames=thermal_frames)

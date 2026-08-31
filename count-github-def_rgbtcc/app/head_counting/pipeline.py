@@ -1,11 +1,11 @@
 """
-Pipeline Orchestration Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pipeline Orchestration Module for Dual-Stream RGB-T
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This module acts as the core coordinator for the head counting pipeline. It sets up
-environment variables, initializes model handlers and video streams, runs the main
-prediction-aggregation loop, writes output reports (CSV, JSON), and ensures graceful
-resource cleanup upon termination or exceptions.
+This module acts as the core coordinator for the RGBT crowd counting pipeline. It sets up
+environment variables, initializes DEF-rgbtcc model handlers and dual video streams (RGB + Thermal),
+runs the main prediction-aggregation loop, writes output reports (CSV, JSON), and ensures
+graceful resource cleanup upon termination or exceptions.
 """
 
 from __future__ import annotations
@@ -21,9 +21,9 @@ import numpy as np
 import statistics
 
 from .config import PipelineConfig
-from .model import YOLOModelHandler
+from .model import DEFModelHandler
 from .tracker import MLflowTracker
-from .video import VideoReader, VideoWriterWrapper
+from .video import DualStreamVideoReader, DualStreamVideoWriterWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +43,16 @@ def format_seconds(seconds: float) -> str:
 
 
 class CountingPipeline:
-    """Orchestrates environment setup, model execution, video multithreading, and report exports.
+    """Orchestrates environment setup, DEF-rgbtcc model execution, dual video multithreading, and analytics reports.
 
     Attributes:
         config: Loaded system PipelineConfig configuration.
         config_path: Path to the loaded YAML configuration file.
-        model_handler: Handler managing the YOLO model lifecycle and predictions.
+        model_handler: Handler managing DEF-rgbtcc model lifecycle and batch predictions.
         tracker: MLflowTracker manager handling experiment logs and metrics.
-        counts: List of integers storing head count history frame-by-frame.
-        video_meta: Cached metadata profile of the active video stream.
-        summary: Result summaries compiled at the end of the run.
+        counts: List of float numbers storing crowd count estimates frame-by-frame.
+        video_meta: Cached metadata profile of active video streams.
+        summary: Result summaries compiled at the end of run.
     """
 
     def __init__(self, config: PipelineConfig, config_path: Path | str | None = None):
@@ -64,9 +64,14 @@ class CountingPipeline:
         """
         self.config = config
         self.config_path = config_path
-        self.model_handler = YOLOModelHandler(config)
+        if config.inference.task == "detect":
+            from .model import YOLOModelHandler
+            self.model_handler = YOLOModelHandler(config)
+        else:
+            self.model_handler = DEFModelHandler(config)
+
         self.tracker = MLflowTracker(config)
-        self.counts: list[int] = []
+        self.counts: list[float] = []
         self.video_meta: dict[str, Any] = {}
         self.summary: dict[str, Any] = {}
 
@@ -85,14 +90,12 @@ class CountingPipeline:
         for var_name, path_str in env_vars.items():
             if path_str:
                 p = Path(path_str)
-                # Resolve relative to config directory if not absolute
                 if not p.is_absolute():
                     p = self.config.config_dir / p
                 p.mkdir(parents=True, exist_ok=True)
                 os.environ[var_name] = str(p.resolve())
                 logger.info(f"Environment variable set: {var_name}={p.resolve()}")
 
-        # Set seeding
         seed = self.config.app.seed
         random.seed(seed)
         np.random.seed(seed)
@@ -131,14 +134,15 @@ class CountingPipeline:
 
         return {
             "app": self.config.app.name,
-            "video": self.config.paths.video,
-            "weights": self.model_handler.weights_ref,
+            "video_rgb": self.config.paths.video_rgb,
+            "video_thermal": self.config.paths.video_thermal,
+            "weights": str(self.model_handler.weights_ref),
             "device": self.config.runtime.device,
             "video_meta": self.video_meta,
             "processed_frames": processed_frames,
             "elapsed_sec": round(float(elapsed_sec), 3),
             "fps_processed": round(processed_frames / elapsed_sec, 3) if elapsed_sec > 0 else 0.0,
-            "inference": self.model_handler.predict_args,
+            "inference": dict(self.model_handler.predict_args) if isinstance(self.model_handler.predict_args, dict) else {},
             "counts": summary_counts,
             "outputs": {
                 "annotated_video": self.config.paths.annotated_video,
@@ -151,8 +155,9 @@ class CountingPipeline:
     def run(self) -> dict[str, Any]:
         """Main execution flow coordinating readers, batch processors, and writers.
 
-        Manages context lifecycles for VideoReader, VideoWriter, and MLflowTracker,
-        handles batch assembly, triggers model evaluations, and writes output files.
+        Manages context lifecycles for DualStreamVideoReader, DualStreamVideoWriterWrapper,
+        and MLflowTracker, handles batch assembly, triggers DEF-rgbtcc model evaluations,
+        and writes output files.
 
         Returns:
             A dictionary containing consolidated analytics summary metrics.
@@ -163,7 +168,7 @@ class CountingPipeline:
         # 2. Setup system runtime variables & optimization flags
         self.model_handler.setup_runtime()
 
-        # 3. Load YOLO model into CUDA device
+        # 3. Load DEF-rgbtcc model into CUDA device
         self.model_handler.load_model()
 
         # Ensure output directories exist
@@ -171,12 +176,15 @@ class CountingPipeline:
         out_dir.mkdir(parents=True, exist_ok=True)
 
         with self.tracker.start_run(config_path=self.config_path):
-            # 4. Initialize multithreaded readers
+            # 4. Initialize multithreaded dual-stream readers
             vid_stride = self.config.inference.vid_stride
             batch_size = self.config.runtime.batch_size
 
-            logger.info(f"Opening video file: {self.config.paths.video}")
-            with VideoReader(self.config.paths.video, stride=vid_stride) as reader:
+            video_rgb = self.config.paths.video_rgb
+            video_thermal = self.config.paths.video_thermal
+
+            logger.info(f"Opening dual-stream video files: RGB='{video_rgb}', Thermal='{video_thermal}'")
+            with DualStreamVideoReader(video_rgb, video_thermal, stride=vid_stride) as reader:
                 self.video_meta = reader.metadata
                 logger.info(f"Video metadata extracted: {json.dumps(self.video_meta)}")
 
@@ -186,11 +194,11 @@ class CountingPipeline:
                 start_time = time.time()
 
                 # Create progress bar
-                with tqdm(total=expected_processed, desc="Processing Video", unit="frame") as pbar:
+                with tqdm(total=expected_processed, desc="Processing RGBT Video", unit="frame") as pbar:
                     self.pbar = pbar
 
                     # 5. Initialize multithreaded writers
-                    with VideoWriterWrapper(self.config, self.video_meta) as writer:
+                    with DualStreamVideoWriterWrapper(self.config, self.video_meta) as writer:
                         # 6. Setup CSV writer if enabled
                         csv_file = None
                         csv_writer = None
@@ -203,32 +211,35 @@ class CountingPipeline:
                             )
                             csv_writer.writeheader()
 
-                        batch_frames = []
+                        batch_rgb_frames = []
+                        batch_thermal_frames = []
                         batch_indices = []
 
                         try:
-                            for frame, frame_idx in reader.iter_frames():
-                                batch_frames.append(frame)
+                            for frame_rgb, frame_thermal, frame_idx in reader.iter_frames():
+                                batch_rgb_frames.append(frame_rgb)
+                                batch_thermal_frames.append(frame_thermal)
                                 batch_indices.append(frame_idx)
 
-                                if len(batch_frames) >= batch_size:
+                                if len(batch_rgb_frames) >= batch_size:
                                     self._process_and_write_batch(
-                                        batch_frames,
+                                        batch_rgb_frames,
+                                        batch_thermal_frames,
                                         batch_indices,
                                         writer,
                                         csv_writer,
                                     )
 
                             # Process remaining frames
-                            if batch_frames:
+                            if batch_rgb_frames:
                                 self._process_and_write_batch(
-                                    batch_frames,
+                                    batch_rgb_frames,
+                                    batch_thermal_frames,
                                     batch_indices,
                                     writer,
                                     csv_writer,
                                 )
 
-                            # Set progress bar total to actual decodable frames on successful completion
                             pbar.total = len(self.counts)
                             pbar.refresh()
 
@@ -251,7 +262,7 @@ class CountingPipeline:
                     self.tracker.log_artifacts(self.summary)
 
                     print("\n" + "=" * 60)
-                    print("PROCESSAMENTO FINALIZADO!")
+                    print("PROCESSAMENTO MULTIMODAL RGBT FINALIZADO!")
                     print(f"Média final: {self.summary['fps_processed']} FPS")
                     print("=" * 60)
 
@@ -259,58 +270,62 @@ class CountingPipeline:
 
     def _process_and_write_batch(
         self,
-        batch_frames: list[np.ndarray],
+        batch_rgb_frames: list[np.ndarray],
+        batch_thermal_frames: list[np.ndarray],
         batch_indices: list[int],
-        writer: VideoWriterWrapper,
+        writer: DualStreamVideoWriterWrapper,
         csv_writer: Any | None,
     ) -> None:
         """Runs batch inference, collects statistics, and enqueues frames to writing threads.
 
         Args:
-            batch_frames: Frames representing the active chunk batch.
+            batch_rgb_frames: RGB frames representing the active chunk batch.
+            batch_thermal_frames: Thermal frames representing the active chunk batch.
             batch_indices: Frame index list for references.
-            writer: Background VideoWriterWrapper queue handler.
+            writer: Background DualStreamVideoWriterWrapper queue handler.
             csv_writer: CSV writer interface for saving count statistics.
         """
-        frames = list(batch_frames)
+        rgb_frames = list(batch_rgb_frames)
+        thermal_frames = list(batch_thermal_frames)
         indices = list(batch_indices)
-        batch_frames.clear()
+
+        batch_rgb_frames.clear()
+        batch_thermal_frames.clear()
         batch_indices.clear()
 
-        # Fast GPU prediction
-        results = self.model_handler.predict_batch(frames)
+        # Fast GPU dual-stream prediction
+        results = self.model_handler.predict_batch(rgb_frames, thermal_frames)
 
         fps = self.video_meta.get("fps", 30.0)
 
         for result, frame_idx in zip(results, indices):
             timestamp_sec = frame_idx / fps if fps > 0 else 0.0
-            
-            # Extract count based on density map dict or bounding boxes
+
             if isinstance(result, dict):
-                count = result.get("count", 0)
+                count = float(result.get("count", 0.0))
             elif hasattr(result, "boxes") and result.boxes is not None:
-                count = len(result.boxes)
+                count = float(len(result.boxes))
             else:
-                count = getattr(result, "count", 0)
+                count = float(getattr(result, "count", 0.0))
+
             self.counts.append(count)
 
-            # Log step-level metric to MLflow
+            # Log step metric to MLflow
             self.tracker.log_step_metric("people_count", count, step=frame_idx)
 
-            # Write row to CSV
+            # Write CSV row
             if csv_writer is not None:
                 csv_writer.writerow(
                     {
                         "frame_index": frame_idx,
                         "timestamp_sec": round(timestamp_sec, 3),
-                        "people_count": count,
+                        "people_count": round(count, 3),
                     }
                 )
 
             # Enqueue task for background annotation and writing
             writer.write_result(result, count, frame_idx, timestamp_sec)
 
-        # Update tqdm progress bar
         if hasattr(self, "pbar") and self.pbar is not None:
             self.pbar.update(len(results))
 
