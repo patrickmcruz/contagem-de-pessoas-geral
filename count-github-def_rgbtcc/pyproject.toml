@@ -1,7 +1,11 @@
 [project]
-name = "count-github-yolo-app"
+name = "count-github-def-rgbtcc"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "mlflow>=3.15.1",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["app"]
+testpaths = ["app/tests"]

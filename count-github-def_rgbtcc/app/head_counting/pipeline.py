@@ -285,8 +285,13 @@ class CountingPipeline:
         for result, frame_idx in zip(results, indices):
             timestamp_sec = frame_idx / fps if fps > 0 else 0.0
             
-            # Extract count based on boxes (head counting specializes in boxes)
-            count = len(result.boxes) if result.boxes is not None else 0
+            # Extract count based on density map dict or bounding boxes
+            if isinstance(result, dict):
+                count = result.get("count", 0)
+            elif hasattr(result, "boxes") and result.boxes is not None:
+                count = len(result.boxes)
+            else:
+                count = getattr(result, "count", 0)
             self.counts.append(count)
 
             # Log step-level metric to MLflow
