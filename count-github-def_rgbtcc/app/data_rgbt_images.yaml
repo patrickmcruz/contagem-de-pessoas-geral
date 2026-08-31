@@ -1,10 +1,10 @@
 # ============================================================================
 # DEF-rgbtcc RGB-T Crowd Counting - Medallion Data Architecture Configuration
 # ============================================================================
-# Medallion Layers (Bronze -> Silver -> Gold) configuration for DJI images:
-# - Bronze Layer: Raw unaligned sensor imagery (data/bronze/images/DJI_0789_W.JPG)
-# - Silver Layer: Homography aligned & equalized layers (data/silver/images/)
-# - Gold Layer:   Heatmaps, telemetry CSV & executive JSON (data/gold/)
+# Medallion Layers (Landing -> Silver -> Gold) configuration for DJI images:
+# - Landing Zone (Bronze): Raw unaligned sensor imagery (input/images/DJI_0789_W.JPG)
+# - Silver Zone:           Homography aligned & equalized layers (input/images_equalized/)
+# - Gold Zone:             Heatmaps, telemetry CSV & executive JSON (output/)
 # ============================================================================
 
 app:
@@ -19,16 +19,16 @@ environment:
   TORCH_HOME: ".cache/torch"
 
 paths:
-  video_rgb: "data/bronze/images/DJI_0789_W.JPG"
-  video_thermal: "data/bronze/images/DJI_0790_T.JPG"
-  bronze_dir: "data/bronze"
-  silver_dir: "data/silver"
-  gold_dir: "data/gold"
+  video_rgb: "input/images/DJI_0789_W.JPG"
+  video_thermal: "input/images/DJI_0790_T.JPG"
+  landing_dir: "input/images"
+  silver_dir: "input/images_equalized"
+  gold_dir: "output"
   weights: "weights/model.pth"
   weights_search_dirs:
     - "weights"
     - "."
-  output_dir: "data/gold"
+  output_dir: "output"
 
 preprocessing:
   enabled: true

@@ -13,7 +13,7 @@ Este documento registra formalmente todas as decisões de arquitetura de softwar
 | **ADR 003** | Equalização Térmica Adaptativa (CLAHE no Espaço LAB) | Aceito | Processamento de Sinal Térmico |
 | **ADR 004** | Estratégia de Fallback Gracioso em Múltiplas Etapas (Homografia $\rightarrow$ FOV Crop) | Aceito | Resiliência e Tolerância a Falhas |
 | **ADR 005** | Arquitetura Desacoplada de Pré-processamento (`RGBTImageEqualizer` & CLI) | Aceito | Design de Software |
-| **ADR 006** | Esteira de Dados RGBT em Arquitetura Medalhão (Bronze $\rightarrow$ Silver $\rightarrow$ Gold) | Aceito | MLOps e Engenharia de Dados |
+| **ADR 006** | Mapeamento de Camadas Medalhão (Landing $\rightarrow$ Silver $\rightarrow$ Gold) | Aceito | MLOps e Engenharia de Dados |
 
 ---
 
@@ -167,30 +167,28 @@ Projetamos a arquitetura do pré-processamento de forma **totalmente desacoplada
 
 ---
 
-## ADR 006: Esteira de Dados RGBT em Arquitetura Medalhão (Bronze $\rightarrow$ Silver $\rightarrow$ Gold)
+## ADR 006: Mapeamento de Camadas Medalhão (Landing $\rightarrow$ Silver $\rightarrow$ Gold)
 
 ### Status
 **Aceito** (Data: 31 de Agosto de 2026)
 
 ### Contexto
-Para garantir a rastreabilidade, governança de dados e isolamento de etapas na esteira de pré-processamento e inferência de IA, é necessário organizar os dados em camadas bem definidas. A ausência dessa divisão dificulta o reprocessamento parcial, a inspeção de dados intermediários alinhados e a exportação limpa dos relatórios de contagem.
+Para padronizar os nomes de diretórios com a taxonomia de mercado de MLOps e Engenharia de Dados, precisamos mapear os diretórios legados do projeto para a Arquitetura Medalhão.
 
 ### Decisão de Arquitetura
-Adotamos o padrão de **Arquitetura Medalhão (Medallion Architecture)** para a esteira de dados RGBT:
+Mapeamos explicitamente os diretórios do projeto para as 3 zonas da Arquitetura Medalhão:
 
-1. **Camada Bronze (Mídias Brutas - Raw Ingestion)**:
-   - Armazena as imagens e vídeos brutos capturados diretamente pelos drones (ex: `DJI_0789_W.JPG` 8000×6000 e `DJI_0790_T.JPG` 640×512).
-   - Preserva os metadados de sensor sem qualquer alteração.
-2. **Camada Silver (Mídias Limpas e Alinhadas - Refined Layers)**:
-   - Contém o par de mídias pré-processadas via `RGBTImageEqualizer` (ADR 001 Homografia, ADR 002 Letterboxing, ADR 003 CLAHE Térmico).
-   - Armazena os pares alinhados em formato padronizado (`1280×1024 px`) e a imagem de auditoria de camadas (`layer_blend_check.jpg`).
-3. **Camada Gold (Produtos de Dados e Analíticos - Analytics Output)**:
-   - Produtos finais para tomada de decisão executiva: mapas de densidade populacional anotados (`annotated_heatmap.jpg`), estatísticas CSV (`frame_counts.csv`), relatórios JSON (`summary.json`) e telemetria MLflow.
+1. **Zona Landing (Bronze - Ingestão Bruta)**:
+   - **Diretório**: `app/input/images/` (ou `app/input/landing/`).
+   - Contém imagens brutas não alteradas diretamente das câmeras/drones (ex: `DJI_0789_W.JPG` e `DJI_0790_T.JPG`).
+2. **Zona Silver (Mídias Limpas, Equalizadas e Alinhadas)**:
+   - **Diretório**: `app/input/images_equalized/` (ou `app/input/silver/`).
+   - Armazena as imagens tratadas pelo `RGBTImageEqualizer` (ADR 001 Homografia SIFT/RANSAC, ADR 002 Letterboxing, ADR 003 CLAHE Térmico) e o arquivo de auditoria `layer_blend_check.jpg`.
+3. **Zona Gold (Produtos Analíticos e Prontos para Consumo)**:
+   - **Diretório**: `app/output/` (ou `app/output/gold/`).
+   - Armazena os resultados finais da IA: mapas de calor de densidade populacional anotados (`annotated_heatmap.jpg`), telemetria CSV (`frame_counts.csv`), resumo JSON executivo (`summary.json`) e métricas do MLflow.
 
 ### Consequências
 - **Positivas**:
-  - **Governança e Rastreabilidade**: Isolamento total entre dados brutos, dados alinhados e resultados de inteligência.
-  - **Reprocessamento Eficiente**: Permite re-executar a contagem na Camada Gold sem precisar re-alinhar as imagens da Camada Silver.
-  - **Prática Padrão de Engenharia de Dados**: Alinhado com as melhores práticas de MLOps.
-- **Negativas / Riscos Mitigados**:
-  - Uso de espaço em disco para armazenar a camada Silver (mitigado pois imagens Silver possuem formato otimizado).
+  - **Familiaridade**: Mapeia diretamente os diretórios existentes (`input/images/` $\rightarrow$ Landing, `input/images_equalized/` $\rightarrow$ Silver, `output/` $\rightarrow$ Gold).
+  - **Governança**: Rastreabilidade completa dos dados desde o estado bruto de sensor até o relatório analítico final.
