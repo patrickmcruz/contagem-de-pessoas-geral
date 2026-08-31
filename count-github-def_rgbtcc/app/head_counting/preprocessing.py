@@ -6,9 +6,9 @@ This module provides a decoupled, independent preprocessor (`RGBTImageEqualizer`
 to perform pixel-level layer alignment (co-registration) between RGB and Thermal image pairs.
 
 Key Capabilities:
-- Automatic Homography Alignment via Feature Matching (SIFT/ORB + RANSAC).
-- Graceful Fallback to FOV Center Crop when features are insufficient.
-- Spatial Resampling & Resolution Standardization (e.g., matching target 1280x1024).
+- Rigid Similarity / Partial Affine Co-registration (Scale, Rotation, Translation).
+- Zero Perspective Trapezoidal Distortion on Gimbal Sensors.
+- FOV Center Crop Pre-scaling (~75% RGB to Thermal FOV matching).
 - Aspect Ratio Preservation with Letterbox Padding.
 - Thermal Dynamic Range & CLAHE Contrast Enhancement.
 - Layer Blend Check Overlay Generation (50% RGB + 50% Thermal).
@@ -33,7 +33,7 @@ class RGBTImageEqualizer:
         thermal_clahe: If True, applies CLAHE contrast enhancement to the Thermal image.
         clahe_clip_limit: Threshold limit for contrast limiting in CLAHE.
         clahe_tile_grid: Grid size for histogram equalization (e.g. (8, 8)).
-        mode: Alignment mode ("homography" or "crop").
+        mode: Alignment mode ("homography" / "affine" or "crop").
     """
 
     def __init__(
@@ -53,7 +53,7 @@ class RGBTImageEqualizer:
             thermal_clahe: Enables CLAHE contrast boost on thermal images.
             clahe_clip_limit: CLAHE clip limit.
             clahe_tile_grid: CLAHE tile grid dimensions tuple.
-            mode: Alignment mode ("homography" or "crop").
+            mode: Alignment mode ("homography", "affine", or "crop").
         """
         self.target_w, self.target_h = target_size
         self.keep_aspect_ratio = keep_aspect_ratio
@@ -69,7 +69,7 @@ class RGBTImageEqualizer:
         )
 
     def _fov_center_crop(self, rgb_img: np.ndarray, crop_ratio: float = 0.75) -> np.ndarray:
-        """Crops the central Field of View of the RGB image matching the narrower Thermal sensor.
+        """Crops the central Field of View of the Wide RGB image matching the narrower Thermal sensor.
 
         Args:
             rgb_img: Input RGB BGR NumPy array image.
@@ -90,51 +90,51 @@ class RGBTImageEqualizer:
     def align_homography(
         self, rgb_img: np.ndarray, thermal_img: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray | None]:
-        """Aligns RGB image to Thermal image plane using SIFT/ORB feature matching & RANSAC.
+        """Aligns RGB image to Thermal image plane using FOV pre-scaling and Partial Affine / Homography.
 
         Args:
             rgb_img: Input raw RGB BGR NumPy array image.
             thermal_img: Input raw Thermal BGR NumPy array image.
 
         Returns:
-            A tuple of (warped_rgb, thermal_img, H_matrix).
+            A tuple of (aligned_rgb, thermal_img, transformation_matrix).
         """
-        # Enhance thermal image first to improve feature detection
         enhanced_thermal = self.enhance_thermal(thermal_img)
+        th_h, th_w = thermal_img.shape[:2]
 
-        # 1. Initialize feature detector (SIFT preferred, fallback to ORB)
+        # 1. First bring Wide RGB image into approximate Thermal FOV space via 75% center crop
+        rgb_cropped = self._fov_center_crop(rgb_img, crop_ratio=0.75)
+        rgb_scaled = cv2.resize(rgb_cropped, (th_w, th_h), interpolation=cv2.INTER_AREA)
+
+        # 2. Detect SIFT / ORB features on FOV-matched images
         detector: Any = None
         is_sift = False
         try:
-            detector = cv2.SIFT_create(nfeatures=3000)
+            detector = cv2.SIFT_create(nfeatures=2000)
             is_sift = True
         except Exception:
-            detector = cv2.ORB_create(nfeatures=3000)
+            detector = cv2.ORB_create(nfeatures=2000)
 
-        # 2. Detect keypoints and descriptors
-        gray_rgb = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2GRAY)
+        gray_rgb = cv2.cvtColor(rgb_scaled, cv2.COLOR_BGR2GRAY)
         gray_th = cv2.cvtColor(enhanced_thermal, cv2.COLOR_BGR2GRAY)
 
         kp_rgb, des_rgb = detector.detectAndCompute(gray_rgb, None)
         kp_th, des_th = detector.detectAndCompute(gray_th, None)
 
         if des_rgb is None or des_th is None or len(kp_rgb) < 4 or len(kp_th) < 4:
-            logger.warning("[HOMOGRAPHY] Insufficient keypoints detected. Falling back to FOV Center Crop.")
-            cropped_rgb = self._fov_center_crop(rgb_img)
-            return cropped_rgb, enhanced_thermal, None
+            logger.warning("[ALIGNMENT] Insufficient keypoints detected. Using FOV Center Crop.")
+            return rgb_cropped, enhanced_thermal, None
 
-        # 3. Match descriptors using KNN
+        # 3. Match descriptors using KNN and Lowe's Ratio Test
         norm_type = cv2.NORM_L2 if is_sift else cv2.NORM_HAMMING
         matcher = cv2.BFMatcher(norm_type, crossCheck=False)
 
         try:
             raw_matches = matcher.knnMatch(des_th, des_rgb, k=2)
         except Exception as e:
-            logger.warning(f"[HOMOGRAPHY] Feature matching failed: {e}. Falling back to FOV Center Crop.")
-            cropped_rgb = self._fov_center_crop(rgb_img)
-            return cropped_rgb, enhanced_thermal, None
+            logger.warning(f"[ALIGNMENT] Feature matching failed: {e}. Using FOV Center Crop.")
+            return rgb_cropped, enhanced_thermal, None
 
-        # 4. Apply Lowe's Ratio Test
         good_matches = []
         for m_tuple in raw_matches:
             if len(m_tuple) == 2:
@@ -142,24 +142,25 @@ class RGBTImageEqualizer:
                 if m.distance < 0.75 * n.distance:
                     good_matches.append(m)
 
-        logger.info(f"[HOMOGRAPHY] Found {len(good_matches)} valid feature matches.")
+        logger.info(f"[ALIGNMENT] Found {len(good_matches)} valid feature matches.")
 
-        # 5. Estimate Homography Matrix if enough good matches exist
+        # 4. Estimate Partial Affine Transformation (Rigid Similarity: Scale + Rotation + Translation)
         if len(good_matches) >= 4:
             src_pts = np.float32([kp_th[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
             dst_pts = np.float32([kp_rgb[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
 
-            H, mask = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, 5.0)
+            M, inliers = cv2.estimateAffinePartial2D(dst_pts, src_pts, method=cv2.RANSAC)
 
-            if H is not None:
-                th_h, th_w = thermal_img.shape[:2]
-                warped_rgb = cv2.warpPerspective(rgb_img, H, (th_w, th_h))
-                logger.info("[HOMOGRAPHY] Homography matrix H successfully estimated and applied!")
-                return warped_rgb, enhanced_thermal, H
+            if M is not None:
+                det = M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]
+                # Validate scale factor / determinant to prevent invalid shearing
+                if 0.2 < det < 5.0:
+                    aligned_rgb = cv2.warpAffine(rgb_scaled, M, (th_w, th_h))
+                    logger.info("[ALIGNMENT] Partial Affine matrix successfully estimated and applied (zero distortion).")
+                    return aligned_rgb, enhanced_thermal, M
 
-        logger.warning("[HOMOGRAPHY] RANSAC failed to estimate robust H matrix. Falling back to FOV Center Crop.")
-        cropped_rgb = self._fov_center_crop(rgb_img)
-        return cropped_rgb, enhanced_thermal, None
+        logger.warning("[ALIGNMENT] Robust registration matrix estimation unviable. Using FOV Center Crop.")
+        return rgb_cropped, enhanced_thermal, None
 
     def _letterbox_resize(self, img: np.ndarray) -> np.ndarray:
         """Resizes an image preserving aspect ratio with zero-padding (letterbox).
@@ -241,14 +242,14 @@ class RGBTImageEqualizer:
         Returns:
             A tuple (rgb_aligned, thermal_aligned) with identical shape (target_h, target_w, 3).
         """
-        if self.mode == "homography":
+        if self.mode in ("homography", "affine"):
             rgb_aligned, thermal_enhanced, _ = self.align_homography(rgb_img, thermal_img)
         else:
             rgb_cropped = self._fov_center_crop(rgb_img)
             thermal_enhanced = self.enhance_thermal(thermal_img)
             rgb_aligned = rgb_cropped
 
-        # Resample both aligned streams to target uniform resolution
+        # Resample both aligned streams to target uniform resolution with letterboxing
         rgb_eq = self._letterbox_resize(rgb_aligned)
         thermal_eq = self._letterbox_resize(thermal_enhanced)
 
@@ -260,7 +261,7 @@ class RGBTImageEqualizer:
         thermal_path: str | Path,
         output_dir: str | Path,
     ) -> Tuple[Path, Path, Path]:
-        """Loads RGB and Thermal files, performs homography alignment & equalization, and saves outputs.
+        """Loads RGB and Thermal files, performs alignment & equalization, and saves outputs.
 
         Args:
             rgb_path: Path to the raw RGB input image file.

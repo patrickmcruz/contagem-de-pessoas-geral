@@ -8,46 +8,44 @@ Este documento registra formalmente todas as decisões de arquitetura de softwar
 
 | ID | Título da Decisão de Arquitetura | Status | Categoria |
 | :--- | :--- | :--- | :--- |
-| **ADR 001** | Registro Espacial Homográfico (SIFT/ORB + RANSAC) para Alinhamento de Camadas | Aceito | Alinhamento Espacial |
+| **ADR 001** | Co-registro Espacial de Camadas (Pre-FOV Crop + Affine Similarity vs Homografia 8-DOF) | Aceito | Alinhamento Espacial |
 | **ADR 002** | Preservação de Aspect Ratio via Letterboxing vs Estiramento Geométrico | Aceito | Redimensionamento |
 | **ADR 003** | Equalização Térmica Adaptativa (CLAHE no Espaço LAB) | Aceito | Processamento de Sinal Térmico |
-| **ADR 004** | Estratégia de Fallback Gracioso em Múltiplas Etapas (Homografia $\rightarrow$ FOV Crop) | Aceito | Resiliência e Tolerância a Falhas |
+| **ADR 004** | Estratégia de Fallback Gracioso em Múltiplas Etapas (Affine $\rightarrow$ FOV Crop) | Aceito | Resiliência e Tolerância a Falhas |
 | **ADR 005** | Arquitetura Desacoplada de Pré-processamento (`RGBTImageEqualizer` & CLI) | Aceito | Design de Software |
 | **ADR 006** | Mapeamento de Camadas Medalhão (Landing $\rightarrow$ Silver $\rightarrow$ Gold) | Aceito | MLOps e Engenharia de Dados |
 
 ---
 
-## ADR 001: Registro Espacial Homográfico (SIFT/ORB + RANSAC) para Alinhamento de Camadas
+## ADR 001: Co-registro Espacial de Camadas (Pre-FOV Crop + Affine Similarity vs Homografia 8-DOF)
 
 ### Status
-**Aceito** (Data: 31 de Agosto de 2026)
+**Aceito** (Atualizado em 31 de Agosto de 2026)
 
 ### Contexto
-Em imagens multimodais capturadas por sensores de drones (como DJI Mavic 3 Enterprise / Matrice 30T), as imagens do espectro visível (RGB / Wide) e do espectro térmico (Infravermelho LWIR) apresentam desalinhamento espacial grave decorrente de:
-1. **Diferença de Campo de Visão (FOV Mismatch)**: A câmera RGB possui um campo de visão mais amplo (~84° HFOV) e resolução muito superior (8000×6000 px) se comparada à câmera térmica (~61° HFOV e 640×512 px).
-2. **Paralaxe Física de Lentes**: As lentes dos sensores óptico e térmico estão separadas fisicamente por alguns centímetros no suporte (*gimbal*).
+Em imagens multimodais capturadas por sensores de drones (como DJI Mavic 3 Enterprise / Matrice 30T), as imagens do espectro visível (RGB / Wide 8000×6000 px) e do espectro térmico (Infravermelho LWIR 640×512 px) apresentam desalinhamento decorrente de:
+1. **Diferença de Campo de Visão (FOV Mismatch)**: A câmera RGB possui um campo de visão mais amplo (~84° HFOV) do que a câmera térmica (~61° HFOV). A imagem térmica cobre aproximadamente os 75% centrais da cena capturada pela câmera Wide.
+2. **Paralaxe Física de Lentes**: As lentes dos sensores óptico e térmico estão montadas lado a lado no mesmo suporte rígido (*gimbal*).
 
-Sem um alinhamento espacial prévio, o pixel $(x, y)$ da imagem térmica não corresponde ao mesmo objeto físico no pixel $(x, y)$ da imagem RGB. Isso prejudica os modelos de fusão adaptativa de características (como o **DEF-rgbtcc**), que necessitam que as mídias estejam sobrepostas como **camadas espelhadas perfeitas (*pixel-level layers*)**.
+#### Problema da Homografia 8-DOF Direta
+A estimativa de Matriz Homográfica $H$ de 8 Graus de Liberdade ($3 \times 3$) diretamente entre imagens de resoluções tão díspares introduz coeficientes de inclinação de perspectiva não-lineares ($H[2,0]$ e $H[2,1]$). Isso causava **distorções trapezoides gigantescas** (efeito keystone, cisalhamento e inversão de perspectiva), inutilizando a imagem visual.
 
 ### Decisão de Arquitetura
-Decidimos adotar a **Abordagem de Registro por Matriz Homográfica baseada em Extratores de Características (ORB/SIFT + RANSAC)** no módulo desacoplado de pré-processamento (`RGBTImageEqualizer`):
+Substituímos a homografia irrestrita de 8-DOF pelo método de **Co-registro Rígido por Afinidade Parcial (Partial Affine Similarity)** associado ao **Pré-corte Proporcional de FOV**:
 
-1. **Extração de Características Multiescala (Feature Detection)**:
-   - Utilização dos algoritmos **SIFT** (*Scale-Invariant Feature Transform*) ou **ORB** (*Oriented FAST and Rotated BRIEF*) para detectar pontos notáveis de cantos, bordas e estruturas geométricas em ambos os espectros.
-2. **Correspondência de Pontos (Feature Matching & Flann/BFMatcher)**:
-   - Uso de `cv2.FlannBasedMatcher` ou `cv2.BFMatcher` com teste de razão de Lowe (*Lowe's Ratio Test*) para identificar pares de pontos válidos entre a imagem RGB e a Térmica.
-3. **Estimação Robustecida da Matriz Homográfica (Homography Estimation)**:
-   - Aplicação de `cv2.findHomography` com algoritmo **RANSAC** (*Random Sample Consensus*) para filtrar pontos discrepantes (*outliers*) e determinar a matriz geométrica $H$ de dimensão $3 \times 3$.
-4. **Deformação de Perspectiva (Perspective Warping)**:
-   - Execução de `cv2.warpPerspective` na imagem RGB para transformar e projetar seu plano geométrico exatamente sobre a grade espacial da imagem térmica, criando duas camadas espelhadas perfeitamente alinhadas.
+1. **Pré-corte Central de FOV (75% Crop)**: A imagem RGB Wide é pré-cortada no seu centro geométrico (75%) para casar a escala angular da lente térmica.
+2. **Transformação de Afinidade Parcial (Scale + Rotation + Translation)**:
+   - Estimada via `cv2.estimateAffinePartial2D(dst_pts, src_pts)` com RANSAC.
+   - Restringe o alinhamento estritamente a transformações rígidas de rotação ($\theta$), escala uniforme ($S$) e translação $(T_x, T_y)$.
+   - **Garantia Matemática**: Proíbe coeficientes de perspectiva e cisalhamento, eliminando 100% de distorções trapezoidais.
+3. **Validação de Determinante de Matriz**: O determinante da matriz $M$ é verificado para garantir escala válida ($0.2 < \det < 5.0$).
 
 ### Consequências
 - **Positivas**:
-  - **Padrão da Indústria**: Método consagrado em visão computacional e sensoriamento remoto para fusão multiespectral.
-  - **Sobreposição em Camadas (Pixel-Level Alignment)**: Permite que o mapa de calor de densidade e a imagem visível se sobreponham de forma precisa, sem desalinhamentos visuais.
-  - **Desacoplamento**: Mantido de forma isolada dentro de `RGBTImageEqualizer`, podendo ser executado via CLI (`preprocess_images.py`) ou integrado ao pipeline principal.
+  - **Zero Distorções Geométricas**: A geometria e a proporção de objetos (corpos humanos, veículos, edifícios) são 100% preservadas.
+  - **Sobreposição em Camadas Sem Cisalhamento**: Alinhamento milimétrico entre a silhueta visível e a assinatura de calor infravermelha.
 - **Negativas / Riscos Mitigados**:
-  - Custo computacional adicional por frame (mitigado ao pré-processar imagens uma única vez ou ao salvar a matriz $H$ para sequências de vídeo com posição de gimbal fixa).
+  - Requer pré-corte de escala (mitigado pela função interna `_fov_center_crop`).
 
 ---
 
@@ -107,39 +105,39 @@ Adotamos o método **CLAHE** (*Contrast Limited Adaptive Histogram Equalization*
 
 ---
 
-## ADR 004: Estratégia de Fallback Gracioso em Múltiplas Etapas (Homografia $\rightarrow$ FOV Crop)
+## ADR 004: Estratégia de Fallback Gracioso em Múltiplas Etapas (Affine $\rightarrow$ FOV Crop)
 
 ### Status
 **Aceito** (Data: 31 de Agosto de 2026)
 
 ### Contexto
-Algumas capturas térmicas em campo apresentam superfícies homogêneas sem textura marcante (ex: corpos d'água tranquilos, gramados uniformes ou superfícies de teto refletivas). Nesses cenários extremos, os algoritmos SIFT/ORB podem não encontrar o número mínimo de 4 pontos correspondentes necessários para estimar matematicamente a Matriz Homográfica $H$ via RANSAC.
+Algumas capturas térmicas em campo apresentam superfícies homogêneas sem textura marcante (ex: corpos d'água tranquilos, gramados uniformes ou superfícies de teto refletivas). Nesses cenários extremos, os algoritmos SIFT/ORB podem não encontrar o número mínimo de 4 pontos correspondentes necessários para estimar matematicamente a Matriz de Afinidade via RANSAC.
 
-Se a aplicação tentasse forçar o cálculo homográfico sem pontos suficientes, o sistema lançaria um erro e interromperia o processamento.
+Se a aplicação tentasse forçar o cálculo sem pontos suficientes, o sistema lançaria um erro e interromperia o processamento.
 
 ### Decisão de Arquitetura
 Implementamos uma **Cascata de Fallback Gracioso em Múltiplas Etapas** (*Multi-Stage Graceful Fallback*):
 
 ```mermaid
 graph TD
-    Start[Par RGB + Térmico] --> TryH{1. SIFT/ORB + RANSAC >= 4 Pontos?}
-    TryH -->|Sim| Homography[Aplicar Transformação Homográfica H]
-    TryH -->|Não / Erro RANSAC| FallbackFOV[2. Fallback: FOV Center Crop 75%]
-    Homography --> Resampling[3. Letterbox Resampling 1280x1024]
+    Start[Par RGB + Térmico] --> TryA{1. Pre-FOV Crop + Affine >= 4 Pontos?}
+    TryA -->|Sim| AffineWarp[Aplicar Transformação de Afinidade Parcial M]
+    TryA -->|Não / Erro RANSAC| FallbackFOV[2. Fallback: Direct FOV Center Crop 75%]
+    AffineWarp --> Resampling[3. Letterbox Resampling 1280x1024]
     FallbackFOV --> Resampling
     Resampling --> Success[Saída Garantida sem Interrupções]
 ```
 
-1. **Estágio 1 (Preferencial)**: Alinhamento Homográfico por SIFT/ORB + RANSAC (`align_homography`).
-2. **Estágio 2 (Fallback Geometrico)**: Se $< 4$ pontos válidos forem encontrados, aciona automaticamente o corte proporcional de campo de visão (`_fov_center_crop` recortando os 75% centrais da imagem Wide).
+1. **Estágio 1 (Preferencial)**: Co-registro por Afinidade Parcial via SIFT/ORB + RANSAC (`align_homography`).
+2. **Estágio 2 (Fallback Geométrico)**: Se $< 4$ pontos válidos forem encontrados, aciona automaticamente o corte proporcional de campo de visão (`_fov_center_crop` recortando os 75% centrais da imagem Wide).
 3. **Estágio 3 (Padronização)**: Redimensionamento seguro via Letterboxing (`_letterbox_resize`).
 
 ### Consequências
 - **Positivas**:
   - **Zero Interrupções (*Zero-Downtime*)**: O pipeline nunca aborta a execução devido a falhas pontuais de textura nas fotos.
-  - **Auditabilidade**: Logs informam explicitamente quando o sistema acionou o fallback: `[HOMOGRAPHY] Insufficient keypoints. Falling back to FOV Center Crop`.
+  - **Auditabilidade**: Logs informam explicitamente quando o sistema acionou o fallback: `[ALIGNMENT] Insufficient keypoints. Using FOV Center Crop`.
 - **Negativas / Riscos Mitigados**:
-  - No modo fallback, o alinhamento é geométrico aproximado e não por matriz de paralaxe exata (comportamento seguro aceito).
+  - No modo fallback, o alinhamento é geométrico por corte de FOV e não por ajuste de lente (comportamento seguro aceito).
 
 ---
 
@@ -183,7 +181,7 @@ Mapeamos explicitamente os diretórios do projeto para as 3 zonas da Arquitetura
    - Contém imagens brutas não alteradas diretamente das câmeras/drones (ex: `DJI_0789_W.JPG` e `DJI_0790_T.JPG`).
 2. **Zona Silver (Mídias Limpas, Equalizadas e Alinhadas)**:
    - **Diretório**: `app/input/images_equalized/` (ou `app/input/silver/`).
-   - Armazena as imagens tratadas pelo `RGBTImageEqualizer` (ADR 001 Homografia SIFT/RANSAC, ADR 002 Letterboxing, ADR 003 CLAHE Térmico) e o arquivo de auditoria `layer_blend_check.jpg`.
+   - Armazena as imagens tratadas pelo `RGBTImageEqualizer` (ADR 001 Afinidade Parcial, ADR 002 Letterboxing, ADR 003 CLAHE Térmico) e o arquivo de auditoria `layer_blend_check.jpg`.
 3. **Zona Gold (Produtos Analíticos e Prontos para Consumo)**:
    - **Diretório**: `app/output/` (ou `app/output/gold/`).
    - Armazena os resultados finais da IA: mapas de calor de densidade populacional anotados (`annotated_heatmap.jpg`), telemetria CSV (`frame_counts.csv`), resumo JSON executivo (`summary.json`) e métricas do MLflow.
