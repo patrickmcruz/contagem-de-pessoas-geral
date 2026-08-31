@@ -6,9 +6,8 @@ This module provides a decoupled, independent preprocessor (`RGBTImageEqualizer`
 to perform pixel-level layer alignment (co-registration) between RGB and Thermal image pairs.
 
 Key Capabilities:
-- Rigid Similarity / Partial Affine Co-registration (Scale, Rotation, Translation).
-- Zero Perspective Trapezoidal Distortion on Gimbal Sensors.
-- FOV Center Crop Pre-scaling (~75% RGB to Thermal FOV matching).
+- Robust Partial Affine Co-registration with Sanity Checks (Scale & Translation bounds).
+- Automatic Fallback to FOV Center Crop (~75% RGB matching Thermal FOV).
 - Aspect Ratio Preservation with Letterbox Padding.
 - Thermal Dynamic Range & CLAHE Contrast Enhancement.
 - Layer Blend Check Overlay Generation (50% RGB + 50% Thermal).
@@ -33,7 +32,7 @@ class RGBTImageEqualizer:
         thermal_clahe: If True, applies CLAHE contrast enhancement to the Thermal image.
         clahe_clip_limit: Threshold limit for contrast limiting in CLAHE.
         clahe_tile_grid: Grid size for histogram equalization (e.g. (8, 8)).
-        mode: Alignment mode ("homography" / "affine" or "crop").
+        mode: Alignment mode ("homography", "affine", or "crop").
     """
 
     def __init__(
@@ -90,7 +89,7 @@ class RGBTImageEqualizer:
     def align_homography(
         self, rgb_img: np.ndarray, thermal_img: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray | None]:
-        """Aligns RGB image to Thermal image plane using FOV pre-scaling and Partial Affine / Homography.
+        """Aligns RGB image to Thermal image plane using FOV pre-scaling and Partial Affine similarity.
 
         Args:
             rgb_img: Input raw RGB BGR NumPy array image.
@@ -104,6 +103,11 @@ class RGBTImageEqualizer:
 
         # 1. First bring Wide RGB image into approximate Thermal FOV space via 75% center crop
         rgb_cropped = self._fov_center_crop(rgb_img, crop_ratio=0.75)
+
+        if self.mode == "crop":
+            logger.info("[ALIGNMENT] Mode is set to 'crop'. Using FOV Center Crop (75%).")
+            return rgb_cropped, enhanced_thermal, None
+
         rgb_scaled = cv2.resize(rgb_cropped, (th_w, th_h), interpolation=cv2.INTER_AREA)
 
         # 2. Detect SIFT / ORB features on FOV-matched images
@@ -121,8 +125,8 @@ class RGBTImageEqualizer:
         kp_rgb, des_rgb = detector.detectAndCompute(gray_rgb, None)
         kp_th, des_th = detector.detectAndCompute(gray_th, None)
 
-        if des_rgb is None or des_th is None or len(kp_rgb) < 4 or len(kp_th) < 4:
-            logger.warning("[ALIGNMENT] Insufficient keypoints detected. Using FOV Center Crop.")
+        if des_rgb is None or des_th is None or len(kp_rgb) < 6 or len(kp_th) < 6:
+            logger.warning("[ALIGNMENT] Insufficient keypoints detected. Falling back to FOV Center Crop.")
             return rgb_cropped, enhanced_thermal, None
 
         # 3. Match descriptors using KNN and Lowe's Ratio Test
@@ -132,34 +136,37 @@ class RGBTImageEqualizer:
         try:
             raw_matches = matcher.knnMatch(des_th, des_rgb, k=2)
         except Exception as e:
-            logger.warning(f"[ALIGNMENT] Feature matching failed: {e}. Using FOV Center Crop.")
+            logger.warning(f"[ALIGNMENT] Feature matching failed: {e}. Falling back to FOV Center Crop.")
             return rgb_cropped, enhanced_thermal, None
 
         good_matches = []
         for m_tuple in raw_matches:
             if len(m_tuple) == 2:
                 m, n = m_tuple
-                if m.distance < 0.75 * n.distance:
+                if m.distance < 0.65 * n.distance:
                     good_matches.append(m)
 
-        logger.info(f"[ALIGNMENT] Found {len(good_matches)} valid feature matches.")
-
-        # 4. Estimate Partial Affine Transformation (Rigid Similarity: Scale + Rotation + Translation)
-        if len(good_matches) >= 4:
+        # 4. Estimate Partial Affine Transformation with Strict Sanity Validation
+        if len(good_matches) >= 6:
             src_pts = np.float32([kp_th[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
             dst_pts = np.float32([kp_rgb[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
 
-            M, inliers = cv2.estimateAffinePartial2D(dst_pts, src_pts, method=cv2.RANSAC)
+            M, inliers = cv2.estimateAffinePartial2D(dst_pts, src_pts, method=cv2.RANSAC, ransacReprojThreshold=3.0)
 
             if M is not None:
-                det = M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]
-                # Validate scale factor / determinant to prevent invalid shearing
-                if 0.2 < det < 5.0:
-                    aligned_rgb = cv2.warpAffine(rgb_scaled, M, (th_w, th_h))
-                    logger.info("[ALIGNMENT] Partial Affine matrix successfully estimated and applied (zero distortion).")
-                    return aligned_rgb, enhanced_thermal, M
+                scale = np.sqrt(M[0, 0] ** 2 + M[0, 1] ** 2)
+                tx = abs(M[0, 2])
+                ty = abs(M[1, 2])
 
-        logger.warning("[ALIGNMENT] Robust registration matrix estimation unviable. Using FOV Center Crop.")
+                # Verify that matrix is physically plausible for gimbal sensors
+                if 0.85 <= scale <= 1.15 and tx <= 50.0 and ty <= 50.0:
+                    aligned_rgb = cv2.warpAffine(rgb_scaled, M, (th_w, th_h))
+                    logger.info(f"[ALIGNMENT] Valid Partial Affine matrix applied (Scale={scale:.2f}, Tx={tx:.1f}px, Ty={ty:.1f}px).")
+                    return aligned_rgb, enhanced_thermal, M
+                else:
+                    logger.warning(f"[ALIGNMENT] Matrix failed sanity check (Scale={scale:.2f}, Tx={tx:.1f}px, Ty={ty:.1f}px). Falling back to FOV Center Crop.")
+
+        logger.warning("[ALIGNMENT] Multimodal feature alignment unviable. Falling back to FOV Center Crop (75%).")
         return rgb_cropped, enhanced_thermal, None
 
     def _letterbox_resize(self, img: np.ndarray) -> np.ndarray:
