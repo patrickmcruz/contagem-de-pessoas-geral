@@ -1,80 +1,87 @@
 #!/usr/bin/env python3
 """
-Standalone CLI Utility for RGBT Image Equalization & Spatial Alignment (ADR 001)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RGBT Image Equalization & Spatial Alignment CLI Tool (ADR 001)
+=============================================================
 
-Equalizes resolution, performs Homography Layer Alignment (SIFT/ORB + RANSAC),
-preserves aspect ratio via letterbox, and generates 50%/50% Layer Blend Check overlays.
+Independent CLI tool to preprocess raw dual-stream RGB and Thermal images before
+submitting them to the head_counting pipeline.
 
 Usage:
-    python preprocess_images.py --rgb input/images/DJI_0789_W.JPG \
-                                --thermal input/images/DJI_0790_T.JPG \
-                                --output input/images_equalized/ \
-                                --mode homography
+    python preprocess_images.py --rgb data/bronze/images/DJI_0789_W.JPG \\
+                                --thermal data/bronze/images/DJI_0790_T.JPG \\
+                                --output data/silver/
 """
 
-import argparse
 import sys
+import argparse
+import logging
 from pathlib import Path
 
-# Add app directory to sys.path
+# Add app directory to sys.path for local module resolution
 APP_DIR = Path(__file__).resolve().parent
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
 from head_counting.preprocessing import RGBTImageEqualizer
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("preprocess_images")
 
-def main() -> None:
+
+def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Standalone CLI Utility for RGBT Dual-Stream Image Homography Alignment (ADR 001)"
+        description="RGBT Layer Equalizer & Spatial Alignment Tool (Medallion Architecture)"
     )
     parser.add_argument(
         "--rgb",
         type=str,
-        default=str(APP_DIR / "input/images/DJI_0789_W.JPG"),
-        help="Path to raw RGB image file",
+        default=str(APP_DIR / "data/bronze/images/DJI_0789_W.JPG"),
+        help="Path to input raw RGB image file (Bronze Layer)",
     )
     parser.add_argument(
         "--thermal",
         type=str,
-        default=str(APP_DIR / "input/images/DJI_0790_T.JPG"),
-        help="Path to raw Thermal image file",
+        default=str(APP_DIR / "data/bronze/images/DJI_0790_T.JPG"),
+        help="Path to input raw Thermal image file (Bronze Layer)",
     )
     parser.add_argument(
         "--output",
         type=str,
-        default=str(APP_DIR / "input/images_equalized"),
-        help="Target output directory for equalized image pair",
+        default=str(APP_DIR / "data/silver"),
+        help="Path to output directory for equalized layers (Silver Layer)",
     )
     parser.add_argument(
         "--mode",
         type=str,
+        choices=["homography", "affine", "crop"],
         default="homography",
-        choices=["homography", "crop"],
-        help="Alignment mode: 'homography' (ADR 001 SIFT/RANSAC) or 'crop' (FOV Center Crop)",
+        help="Alignment algorithm mode (default: homography / affine similarity)",
     )
     parser.add_argument(
         "--width",
         type=int,
         default=1280,
-        help="Target equalized width in pixels (default: 1280)",
+        help="Target resolution width in pixels (default: 1280)",
     )
     parser.add_argument(
         "--height",
         type=int,
         default=1024,
-        help="Target equalized height in pixels (default: 1024)",
+        help="Target resolution height in pixels (default: 1024)",
     )
     parser.add_argument(
         "--no-clahe",
         action="store_true",
-        help="Disable CLAHE thermal contrast enhancement",
+        help="Disable CLAHE contrast boost on thermal images",
     )
     parser.add_argument(
         "--no-letterbox",
         action="store_true",
-        help="Disable aspect-ratio letterboxing (stretch resize)",
+        help="Disable letterboxing padding (force resize stretch)",
     )
 
     args = parser.parse_args()
@@ -83,17 +90,24 @@ def main() -> None:
     thermal_path = Path(args.thermal)
     output_dir = Path(args.output)
 
-    print("=" * 60)
-    print("       RGBT LAYER HOMOGRAPHY EQUALIZER (ADR 001)")
-    print("=" * 60)
-    print(f"RGB Input:      {rgb_path}")
-    print(f"Thermal Input:  {thermal_path}")
-    print(f"Target Output:  {output_dir}")
-    print(f"Target Size:    {args.width}x{args.height} px")
-    print(f"Alignment Mode: {args.mode.upper()} (SIFT/ORB + RANSAC)")
-    print(f"Thermal CLAHE:  {not args.no_clahe}")
-    print(f"Letterboxing:   {not args.no_letterbox}")
-    print("=" * 60)
+    print("============================================================")
+    print("       RGBT LAYER EQUALIZER & ALIGNMENT (MEDALLION BRONZE -> SILVER)")
+    print("============================================================")
+    print(f"RGB Input (Bronze):    {rgb_path}")
+    print(f"Thermal Input (Bronze):{thermal_path}")
+    print(f"Target Output (Silver):{output_dir}")
+    print(f"Target Size:           {args.width}x{args.height} px")
+    print(f"Alignment Mode:        {args.mode.upper()}")
+    print(f"Thermal CLAHE:         {not args.no_clahe}")
+    print(f"Letterboxing:          {not args.no_letterbox}")
+    print("============================================================")
+
+    if not rgb_path.exists():
+        logger.error(f"RGB input file not found: {rgb_path}")
+        return 1
+    if not thermal_path.exists():
+        logger.error(f"Thermal input file not found: {thermal_path}")
+        return 1
 
     equalizer = RGBTImageEqualizer(
         target_size=(args.width, args.height),
@@ -102,17 +116,21 @@ def main() -> None:
         mode=args.mode,
     )
 
-    out_rgb, out_thermal, out_blend = equalizer.process_files(
-        rgb_path=rgb_path,
-        thermal_path=thermal_path,
-        output_dir=output_dir,
-    )
-
-    print("\n[SUCCESS] Homography layer equalization completed!")
-    print(f" ├─ Equalized RGB Layer:     {out_rgb}")
-    print(f" ├─ Equalized Thermal Layer: {out_thermal}")
-    print(f" └─ Layer Blend Check:       {out_blend}\n")
+    try:
+        out_rgb, out_th, out_blend = equalizer.process_files(
+            rgb_path=rgb_path,
+            thermal_path=thermal_path,
+            output_dir=output_dir,
+        )
+        print("\n[SUCCESS] Medallion Silver layer equalization completed!")
+        print(f" ├─ Equalized RGB Layer:     {out_rgb}")
+        print(f" ├─ Equalized Thermal Layer: {out_th}")
+        print(f" └─ Layer Blend Check:       {out_blend}")
+        return 0
+    except Exception as e:
+        logger.error(f"Error during preprocessing: {e}", exc_info=True)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

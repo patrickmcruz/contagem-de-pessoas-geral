@@ -67,11 +67,10 @@ class PathsConfig:
     images_thermal: str = ""
     weights: str = "model.pth"
     weights_search_dirs: list[str] = field(default_factory=list)
-    output_dir: str = "output"
-    landing_dir: str = "input/landing"
-    bronze_dir: str = "input/landing"
-    silver_dir: str = "input/silver"
-    gold_dir: str = "output/gold"
+    output_dir: str = "data/gold"
+    bronze_dir: str = "data/bronze"
+    silver_dir: str = "data/silver"
+    gold_dir: str = "data/gold"
     annotated_video: str = ""
     frame_counts_csv: str = ""
     summary_json: str = ""
@@ -308,11 +307,10 @@ class PipelineConfig:
             images_thermal=raw_paths.get("images_thermal", ""),
             weights=raw_paths.get("weights", "model.pth"),
             weights_search_dirs=list(raw_paths.get("weights_search_dirs", [])),
-            output_dir=raw_paths.get("output_dir", "output"),
-            landing_dir=raw_paths.get("landing_dir", raw_paths.get("bronze_dir", "input/landing")),
-            bronze_dir=raw_paths.get("bronze_dir", raw_paths.get("landing_dir", "input/landing")),
-            silver_dir=raw_paths.get("silver_dir", "input/silver"),
-            gold_dir=raw_paths.get("gold_dir", "output/gold"),
+            output_dir=raw_paths.get("output_dir", "data/gold"),
+            bronze_dir=raw_paths.get("bronze_dir", "data/bronze"),
+            silver_dir=raw_paths.get("silver_dir", "data/silver"),
+            gold_dir=raw_paths.get("gold_dir", "data/gold"),
             annotated_video=raw_paths.get("annotated_video", ""),
             frame_counts_csv=raw_paths.get("frame_counts_csv", ""),
             summary_json=raw_paths.get("summary_json", ""),
@@ -444,7 +442,6 @@ class PipelineConfig:
         self.paths.weights = to_absolute(self.paths.weights)
         self.paths.weights_search_dirs = [to_absolute(d) for d in self.paths.weights_search_dirs]
         self.paths.output_dir = to_absolute(self.paths.output_dir)
-        self.paths.landing_dir = to_absolute(self.paths.landing_dir)
         self.paths.bronze_dir = to_absolute(self.paths.bronze_dir)
         self.paths.silver_dir = to_absolute(self.paths.silver_dir)
         self.paths.gold_dir = to_absolute(self.paths.gold_dir)

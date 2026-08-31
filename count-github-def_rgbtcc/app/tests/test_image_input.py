@@ -36,8 +36,8 @@ def test_dual_stream_image_reader(tmp_path: Path) -> None:
 
 
 def test_dji_images_exist() -> None:
-    """Verifies that the actual DJI test images exist in app/input/images."""
-    images_dir = Path("/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/input/images")
+    """Verifies that the actual DJI test images exist in app/data/bronze/images."""
+    images_dir = Path("/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/data/bronze/images")
     rgb_image = images_dir / "DJI_0789_W.JPG"
     thermal_image = images_dir / "DJI_0790_T.JPG"
 

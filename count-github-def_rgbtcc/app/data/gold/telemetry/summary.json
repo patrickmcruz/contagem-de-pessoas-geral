@@ -1,7 +1,7 @@
 {
   "app": "def-rgbtcc-medallion-dji-images",
-  "video_rgb": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/data/silver/images/DJI_0789_W_silver.JPG",
-  "video_thermal": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/data/silver/images/DJI_0790_T_silver.jpg",
+  "video_rgb": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/data/silver/images/DJI_0789_W_equalized.JPG",
+  "video_thermal": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/data/silver/images/DJI_0790_T_equalized.jpg",
   "weights": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/weights/model.pth",
   "device": 0,
   "video_meta": {
@@ -24,8 +24,8 @@
     }
   },
   "processed_frames": 1,
-  "elapsed_sec": 0.052,
-  "fps_processed": 19.3,
+  "elapsed_sec": 0.05,
+  "fps_processed": 20.191,
   "inference": {
     "device": 0,
     "imgsz": 640,

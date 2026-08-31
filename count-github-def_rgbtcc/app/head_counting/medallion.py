@@ -1,14 +1,14 @@
 """
-Medallion Data Architecture Pipeline Orchestrator (Landing -> Silver -> Gold)
+Medallion Data Architecture Pipeline Orchestrator (Bronze -> Silver -> Gold)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This module implements the Medallion Data Architecture for RGBT Crowd Counting:
-- Landing Zone (Bronze): Ingests raw, unmodified sensor images/videos with original metadata
-  from `input/landing/` (formerly `input/images/`).
-- Silver Zone: Cleans, enhances (CLAHE), letterboxes, and spatially aligns RGB and Thermal
-  imagery via Homography (ADR 001-005). Writes refined layers to `input/silver/` (formerly `input/images_equalized/`).
-- Gold Zone: Evaluates crowd density predictions via CountingPipeline and exports decision-ready
-  data products (annotated heatmaps, frame_counts.csv, summary.json, MLflow telemetry) to `output/gold/` (formerly `output/`).
+- Bronze Layer (Raw Ingestion): Ingests raw, unmodified sensor images/videos with original metadata
+  from `data/bronze/` (e.g. `data/bronze/images/`).
+- Silver Layer (Refined Layers): Cleans, enhances (CLAHE), letterboxes, and spatially co-registers RGB
+  and Thermal imagery via Partial Affine Similarity (ADR 001-005). Writes refined layers to `data/silver/`.
+- Gold Layer (Analytics Output): Evaluates crowd density predictions via CountingPipeline and exports
+  decision-ready data products (annotated heatmaps, frame_counts.csv, summary.json, MLflow telemetry) to `data/gold/`.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ class MedallionPipelineRunner:
     Attributes:
         config: The PipelineConfig instance.
         config_path: Path to the YAML configuration file.
-        equalizer: The RGBTImageEqualizer instance for Landing -> Silver processing.
+        equalizer: The RGBTImageEqualizer instance for Bronze -> Silver processing.
     """
 
     def __init__(self, config: PipelineConfig, config_path: Path | str | None = None):
@@ -44,7 +44,7 @@ class MedallionPipelineRunner:
         self.config_path = config_path
 
         # Setup Medallion directories
-        self.landing_dir = Path(self.config.paths.landing_dir or self.config.paths.bronze_dir)
+        self.bronze_dir = Path(self.config.paths.bronze_dir)
         self.silver_dir = Path(self.config.paths.silver_dir)
         self.gold_dir = Path(self.config.paths.gold_dir)
 
@@ -61,8 +61,8 @@ class MedallionPipelineRunner:
         )
 
     def _ensure_directories(self) -> None:
-        """Creates the directory structure for Landing (Bronze), Silver, and Gold zones."""
-        self.landing_dir.mkdir(parents=True, exist_ok=True)
+        """Creates the directory structure for Bronze, Silver, and Gold layers."""
+        (self.bronze_dir / "images").mkdir(parents=True, exist_ok=True)
         (self.silver_dir / "images").mkdir(parents=True, exist_ok=True)
         (self.silver_dir / "layer_blend_checks").mkdir(parents=True, exist_ok=True)
         (self.gold_dir / "heatmaps").mkdir(parents=True, exist_ok=True)
@@ -70,30 +70,30 @@ class MedallionPipelineRunner:
         (self.gold_dir / "snapshots").mkdir(parents=True, exist_ok=True)
 
     def run_silver(self) -> Tuple[Path, Path]:
-        """Executes the Landing (Bronze) -> Silver transformation phase.
+        """Executes the Bronze -> Silver transformation phase.
 
-        Ingests raw media from Landing zone (or configured paths), applies homography alignment,
-        letterboxing, and thermal CLAHE, and saves refined equalized layers into Silver zone.
+        Ingests raw media from Bronze layer (or configured paths), applies co-registration,
+        letterboxing, and thermal CLAHE, and saves refined equalized layers into Silver directory.
 
         Returns:
             A tuple of (silver_rgb_path, silver_thermal_path).
         """
         logger.info("============================================================")
-        logger.info("       MEDALLION PIPELINE: LANDING -> SILVER TRANSFORMATION ")
+        logger.info("       MEDALLION PIPELINE: BRONZE -> SILVER TRANSFORMATION  ")
         logger.info("============================================================")
 
         rgb_input = Path(self.config.paths.video_rgb)
         thermal_input = Path(self.config.paths.video_thermal)
 
         if not rgb_input.exists():
-            raise FileNotFoundError(f"Landing RGB input not found: {rgb_input}")
+            raise FileNotFoundError(f"Bronze RGB input not found: {rgb_input}")
 
-        logger.info(f"[LANDING -> SILVER] Ingesting raw media: RGB='{rgb_input.name}'")
+        logger.info(f"[BRONZE -> SILVER] Ingesting raw media: RGB='{rgb_input.name}'")
 
         # 1. Read raw images
         frame_rgb = cv2.imread(str(rgb_input))
         if frame_rgb is None:
-            raise RuntimeError(f"Failed to read Landing RGB image: {rgb_input}")
+            raise RuntimeError(f"Failed to read Bronze RGB image: {rgb_input}")
 
         frame_thermal = None
         if thermal_input and thermal_input.exists():
@@ -102,7 +102,7 @@ class MedallionPipelineRunner:
         if frame_thermal is None:
             frame_thermal = frame_rgb.copy()
 
-        # 2. Apply Silver layer equalization (Homography, Letterboxing, CLAHE)
+        # 2. Apply Silver layer equalization (Affine Co-registration, Letterboxing, CLAHE)
         eq_rgb, eq_thermal = self.equalizer.process_pair(frame_rgb, frame_thermal)
 
         # 3. Save Silver refined layers
@@ -126,7 +126,7 @@ class MedallionPipelineRunner:
         """Executes the Silver -> Gold prediction and analytics phase.
 
         Feeds Silver aligned layers into CountingPipeline, evaluates crowd density,
-        and saves decision-ready outputs into Gold zone.
+        and saves decision-ready outputs into Gold directory.
 
         Args:
             silver_rgb_path: Optional path to Silver RGB media.
@@ -146,7 +146,7 @@ class MedallionPipelineRunner:
         if silver_thermal_path:
             self.config.paths.video_thermal = str(silver_thermal_path)
 
-        # Redirect output targets to Gold zone subfolders
+        # Redirect output targets to Gold layer subfolders
         self.config.paths.output_dir = str(self.gold_dir)
         self.config.paths.annotated_video = str(self.gold_dir / "heatmaps" / "annotated_heatmap.mp4")
         self.config.paths.frame_counts_csv = str(self.gold_dir / "telemetry" / "frame_counts.csv")
@@ -166,6 +166,6 @@ class MedallionPipelineRunner:
         return summary
 
     def run_all(self) -> dict[str, Any]:
-        """Executes full Medallion pipeline: Landing -> Silver -> Gold."""
+        """Executes full Medallion pipeline: Bronze -> Silver -> Gold."""
         silver_rgb, silver_thermal = self.run_silver()
         return self.run_gold(silver_rgb, silver_thermal)
