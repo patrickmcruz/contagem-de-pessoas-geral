@@ -6,6 +6,7 @@ This module provides a decoupled, independent preprocessor (`RGBTImageEqualizer`
 to perform pixel-level layer alignment (co-registration) between RGB and Thermal image pairs.
 
 Key Capabilities:
+- Pedestrian Sub-Pixel Alignment: Calibrated displacement offsets for perfect crowd silhouette overlay.
 - Lens Undistortion Correction (`undistort_lens`): Corrects Wide 24mm lens barrel distortion.
 - Precise FOV Aspect-Ratio Matching (Corrects 4:3 vs 5:4 sensor aspect ratio mismatch eliminating lateral shearing/squeeze).
 - Ground-Plane ROI Focused Co-registration: Prioritizes pedestrian surface alignment over rooftop parallax.
@@ -38,8 +39,8 @@ class RGBTImageEqualizer:
         clahe_tile_grid: Grid size for histogram equalization (e.g. (8, 8)).
         fov_crop_ratio: Center crop height ratio for Wide RGB matching Thermal FOV (default 0.70 / 70%).
         undistort_lens: If True, corrects Wide lens radial barrel distortion.
-        shift_rgb_x: Horizontal shift in pixels applied strictly to RGB image (negative = left).
-        shift_rgb_y: Vertical shift in pixels applied strictly to RGB image (negative = up).
+        shift_rgb_x: Horizontal shift in pixels applied strictly to RGB image (default -15px left).
+        shift_rgb_y: Vertical shift in pixels applied strictly to RGB image (default -16px up).
         mode: Alignment mode ("homography", "affine", or "crop").
     """
 
@@ -52,8 +53,8 @@ class RGBTImageEqualizer:
         clahe_tile_grid: Tuple[int, int] = (8, 8),
         fov_crop_ratio: float = 0.70,
         undistort_lens: bool = True,
-        shift_rgb_x: int = -5,
-        shift_rgb_y: int = -2,
+        shift_rgb_x: int = -22,
+        shift_rgb_y: int = -23,
         mode: str = "homography",
     ):
         """Initializes RGBTImageEqualizer settings.
@@ -66,8 +67,8 @@ class RGBTImageEqualizer:
             clahe_tile_grid: CLAHE tile grid dimensions tuple.
             fov_crop_ratio: Wide RGB center crop height ratio matching Thermal HFOV (default 0.70).
             undistort_lens: Corrects 24mm Wide lens barrel distortion.
-            shift_rgb_x: Direct horizontal shift in pixels for RGB (default -5px left).
-            shift_rgb_y: Direct vertical shift in pixels for RGB (default -2px up).
+            shift_rgb_x: Direct horizontal shift in pixels for RGB (default -15px left).
+            shift_rgb_y: Direct vertical shift in pixels for RGB (default -16px up).
             mode: Alignment mode ("homography", "affine", or "crop").
         """
         self.target_w, self.target_h = target_size
