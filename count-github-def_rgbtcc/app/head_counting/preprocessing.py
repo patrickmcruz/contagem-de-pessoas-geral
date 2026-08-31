@@ -6,9 +6,11 @@ This module provides a decoupled, independent preprocessor (`RGBTImageEqualizer`
 to perform pixel-level layer alignment (co-registration) between RGB and Thermal image pairs.
 
 Key Capabilities:
-- Robust Partial Affine Co-registration with Sanity Checks (Scale & Translation bounds).
-- Automatic Fallback to FOV Center Crop (~75% RGB matching Thermal FOV).
+- Precise FOV Aspect-Ratio Matching (Corrects 4:3 vs 5:4 sensor aspect ratio mismatch eliminating lateral shearing/squeeze).
+- Fine-tuning Translation Offsets (`shift_rgb_x`, `shift_rgb_y`) applied strictly to RGB image.
 - Aspect Ratio Preservation with Letterbox Padding.
+- Robust Partial Affine Co-registration with Sanity Checks (Scale & Translation bounds).
+- Automatic Fallback to Calibrated Aspect-Matched FOV Crop.
 - Thermal Dynamic Range & CLAHE Contrast Enhancement.
 - Layer Blend Check Overlay Generation (50% RGB + 50% Thermal).
 """
@@ -32,6 +34,9 @@ class RGBTImageEqualizer:
         thermal_clahe: If True, applies CLAHE contrast enhancement to the Thermal image.
         clahe_clip_limit: Threshold limit for contrast limiting in CLAHE.
         clahe_tile_grid: Grid size for histogram equalization (e.g. (8, 8)).
+        fov_crop_ratio: Center crop height ratio for Wide RGB matching Thermal FOV (default 0.70 / 70%).
+        shift_rgb_x: Horizontal shift in pixels applied strictly to RGB image (negative = left).
+        shift_rgb_y: Vertical shift in pixels applied strictly to RGB image (negative = up).
         mode: Alignment mode ("homography", "affine", or "crop").
     """
 
@@ -42,6 +47,9 @@ class RGBTImageEqualizer:
         thermal_clahe: bool = True,
         clahe_clip_limit: float = 2.5,
         clahe_tile_grid: Tuple[int, int] = (8, 8),
+        fov_crop_ratio: float = 0.70,
+        shift_rgb_x: int = -5,
+        shift_rgb_y: int = -2,
         mode: str = "homography",
     ):
         """Initializes RGBTImageEqualizer settings.
@@ -52,6 +60,9 @@ class RGBTImageEqualizer:
             thermal_clahe: Enables CLAHE contrast boost on thermal images.
             clahe_clip_limit: CLAHE clip limit.
             clahe_tile_grid: CLAHE tile grid dimensions tuple.
+            fov_crop_ratio: Wide RGB center crop height ratio matching Thermal HFOV (default 0.70).
+            shift_rgb_x: Direct horizontal shift in pixels for RGB (default -5px left).
+            shift_rgb_y: Direct vertical shift in pixels for RGB (default -2px up).
             mode: Alignment mode ("homography", "affine", or "crop").
         """
         self.target_w, self.target_h = target_size
@@ -59,6 +70,9 @@ class RGBTImageEqualizer:
         self.thermal_clahe = thermal_clahe
         self.clahe_clip_limit = clahe_clip_limit
         self.clahe_tile_grid = clahe_tile_grid
+        self.fov_crop_ratio = fov_crop_ratio
+        self.shift_rgb_x = shift_rgb_x
+        self.shift_rgb_y = shift_rgb_y
         self.mode = mode.lower()
 
         self._clahe = (
@@ -67,22 +81,40 @@ class RGBTImageEqualizer:
             else None
         )
 
-    def _fov_center_crop(self, rgb_img: np.ndarray, crop_ratio: float = 0.75) -> np.ndarray:
-        """Crops the central Field of View of the Wide RGB image matching the narrower Thermal sensor.
+    def _fov_center_crop(
+        self, rgb_img: np.ndarray, thermal_img: np.ndarray | None = None, crop_ratio: float | None = None
+    ) -> np.ndarray:
+        """Crops the central Field of View of the Wide RGB image matching Thermal FOV and target aspect ratio (5:4).
 
         Args:
             rgb_img: Input RGB BGR NumPy array image.
-            crop_ratio: Center crop ratio (default 0.75 for ~61° vs 84° FOV).
+            thermal_img: Optional Thermal BGR NumPy array image to extract native aspect ratio.
+            crop_ratio: Height crop ratio (default 0.70 for ~61° vs 84° HFOV optical match).
 
         Returns:
-            Center-cropped RGB BGR NumPy array image.
+            Aspect-ratio matched center-cropped RGB BGR NumPy array image.
         """
-        h, w = rgb_img.shape[:2]
-        crop_w = int(w * crop_ratio)
-        crop_h = int(h * crop_ratio)
+        ratio = crop_ratio if crop_ratio is not None else self.fov_crop_ratio
+        h_rgb, w_rgb = rgb_img.shape[:2]
 
-        left = (w - crop_w) // 2
-        top = (h - crop_h) // 2
+        # Target aspect ratio: match target_w / target_h (or thermal_img aspect ratio)
+        if thermal_img is not None:
+            th_h, th_w = thermal_img.shape[:2]
+            target_aspect = th_w / th_h
+        else:
+            target_aspect = self.target_w / self.target_h
+
+        # Calculate crop dimensions matching target aspect ratio (e.g. 5:4)
+        crop_h = int(h_rgb * ratio)
+        crop_w = int(crop_h * target_aspect)
+
+        # If crop_w exceeds w_rgb, clamp crop_w and recompute crop_h
+        if crop_w > w_rgb:
+            crop_w = w_rgb
+            crop_h = int(crop_w / target_aspect)
+
+        left = (w_rgb - crop_w) // 2
+        top = (h_rgb - crop_h) // 2
 
         return rgb_img[top : top + crop_h, left : left + crop_w].copy()
 
@@ -101,11 +133,11 @@ class RGBTImageEqualizer:
         enhanced_thermal = self.enhance_thermal(thermal_img)
         th_h, th_w = thermal_img.shape[:2]
 
-        # 1. First bring Wide RGB image into approximate Thermal FOV space via 75% center crop
-        rgb_cropped = self._fov_center_crop(rgb_img, crop_ratio=0.75)
+        # 1. First bring Wide RGB image into optical Thermal FOV & 5:4 Aspect Ratio space
+        rgb_cropped = self._fov_center_crop(rgb_img, thermal_img, crop_ratio=self.fov_crop_ratio)
 
         if self.mode == "crop":
-            logger.info("[ALIGNMENT] Mode is set to 'crop'. Using FOV Center Crop (75%).")
+            logger.info(f"[ALIGNMENT] Mode is set to 'crop'. Using FOV Center Crop ({self.fov_crop_ratio*100:.0f}%).")
             return rgb_cropped, enhanced_thermal, None
 
         rgb_scaled = cv2.resize(rgb_cropped, (th_w, th_h), interpolation=cv2.INTER_AREA)
@@ -166,7 +198,7 @@ class RGBTImageEqualizer:
                 else:
                     logger.warning(f"[ALIGNMENT] Matrix failed sanity check (Scale={scale:.2f}, Tx={tx:.1f}px, Ty={ty:.1f}px). Falling back to FOV Center Crop.")
 
-        logger.warning("[ALIGNMENT] Multimodal feature alignment unviable. Falling back to FOV Center Crop (75%).")
+        logger.warning(f"[ALIGNMENT] Multimodal feature alignment unviable. Falling back to FOV Center Crop ({self.fov_crop_ratio*100:.0f}%).")
         return rgb_cropped, enhanced_thermal, None
 
     def _letterbox_resize(self, img: np.ndarray) -> np.ndarray:
@@ -252,13 +284,18 @@ class RGBTImageEqualizer:
         if self.mode in ("homography", "affine"):
             rgb_aligned, thermal_enhanced, _ = self.align_homography(rgb_img, thermal_img)
         else:
-            rgb_cropped = self._fov_center_crop(rgb_img)
+            rgb_cropped = self._fov_center_crop(rgb_img, thermal_img)
             thermal_enhanced = self.enhance_thermal(thermal_img)
             rgb_aligned = rgb_cropped
 
         # Resample both aligned streams to target uniform resolution with letterboxing
         rgb_eq = self._letterbox_resize(rgb_aligned)
         thermal_eq = self._letterbox_resize(thermal_enhanced)
+
+        # Apply fine-tuning translation shift strictly to RGB image
+        if self.shift_rgb_x != 0 or self.shift_rgb_y != 0:
+            M_shift = np.float32([[1, 0, self.shift_rgb_x], [0, 1, self.shift_rgb_y]])
+            rgb_eq = cv2.warpAffine(rgb_eq, M_shift, (self.target_w, self.target_h))
 
         return rgb_eq, thermal_eq
 
