@@ -285,13 +285,22 @@ class RGBTImageEqualizer:
             raise RuntimeError(f"Failed to read Thermal image file: {thermal_path}")
 
         rgb_eq, thermal_eq = self.process_pair(rgb_img, thermal_img)
-
-        # Create Layer Blend Overlay Check
         blend_img = self.create_blend_overlay(rgb_eq, thermal_eq, alpha=0.5)
 
-        out_rgb_path = output_dir / f"{rgb_path.stem}_equalized.JPG"
-        out_thermal_path = output_dir / f"{thermal_path.stem}_equalized.JPG"
-        out_blend_path = output_dir / "layer_blend_check.jpg"
+        # Determine clean subdirectories for Silver layer
+        if output_dir.name in ("images", "layer_blend_checks"):
+            img_out_dir = output_dir if output_dir.name == "images" else output_dir.parent / "images"
+            blend_out_dir = output_dir if output_dir.name == "layer_blend_checks" else output_dir.parent / "layer_blend_checks"
+        else:
+            img_out_dir = output_dir / "images"
+            blend_out_dir = output_dir / "layer_blend_checks"
+
+        img_out_dir.mkdir(parents=True, exist_ok=True)
+        blend_out_dir.mkdir(parents=True, exist_ok=True)
+
+        out_rgb_path = img_out_dir / f"{rgb_path.stem}_equalized{rgb_path.suffix}"
+        out_thermal_path = img_out_dir / f"{thermal_path.stem}_equalized.jpg"
+        out_blend_path = blend_out_dir / f"{rgb_path.stem}_blend_check.jpg"
 
         cv2.imwrite(str(out_rgb_path), rgb_eq)
         cv2.imwrite(str(out_thermal_path), thermal_eq)
