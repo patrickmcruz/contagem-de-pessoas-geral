@@ -118,3 +118,40 @@ AssertionError: Torch not compiled with CUDA enabled
 [2026-03-18 15:38:16.624] [INFO]| Tempo Total de Execucao: 112.60 segundos
 [2026-03-18 15:38:16.624] [INFO]| Video salvo em: output/exemplo_3_pessoa_output_2.mp4
 [2026-03-18 15:38:16.624] [INFO]| Pessoas Unicas Confirmadas: 5
+[2026-05-18 17:04:41.451] [INFO]| --- Iniciando Processamento de Video Gravado ---
+[2026-05-18 17:04:41.452] [INFO]| Entrada: input/20260329_23.mp4
+[2026-05-18 17:04:41.452] [INFO]| Saida: resultado.mp4
+[2026-05-18 17:04:41.452] [DEBUG]| Carregando detector yolo11x.pt (sz=1280) no dispositivo cuda
+[2026-05-18 17:04:41.673] [ERROR]| Erro fatal na inicializacao dos componentes: Torch not compiled with CUDA enabled
+Traceback (most recent call last):
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\src\main.py", line 63, in main
+    detector = YOLODetector(
+               ^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\src\detectors\yolo_detector.py", line 16, in __init__
+    self.model.to(self.device)
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\nn\modules\module.py", line 1381, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\ultralytics\engine\model.py", line 856, in _apply
+    self = super()._apply(fn)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\ultralytics\nn\tasks.py", line 288, in _apply
+    self = super()._apply(fn)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\nn\modules\module.py", line 933, in _apply
+    module._apply(fn)
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\nn\modules\module.py", line 964, in _apply
+    param_applied = fn(param)
+                    ^^^^^^^^^
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\nn\modules\module.py", line 1367, in convert
+    return t.to(
+           ^^^^^
+  File "C:\Users\patrickcruz\Documents\Professional\Github\contagem-de-pessoas\count-peoples-record\.venv\Lib\site-packages\torch\cuda\__init__.py", line 417, in _lazy_init
+    raise AssertionError("Torch not compiled with CUDA enabled")
+AssertionError: Torch not compiled with CUDA enabled

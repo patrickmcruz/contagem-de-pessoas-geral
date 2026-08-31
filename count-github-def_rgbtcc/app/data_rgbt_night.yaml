@@ -1,0 +1,94 @@
+# ============================================================================
+# DEF-rgbtcc RGB-T Crowd Counting - Isolated Night Run Configuration
+# ============================================================================
+# Configuration for DEF-rgbtcc dual-modality (RGB + Thermal) crowd counting in night/low-light scenarios.
+# All paths are relative to this folder unless they are absolute paths.
+# ============================================================================
+
+app:
+  name: "def-rgbtcc-crowd-counting-night"
+  install_requirements: false
+  requirements_file: "requirements.txt"
+  seed: 42
+
+environment:
+  YOLO_CONFIG_DIR: ".yolo"
+  MPLCONFIGDIR: ".cache/matplotlib"
+  TORCH_HOME: ".cache/torch"
+
+paths:
+  video_rgb: "input/videos/muralha-noite.mp4"
+  video_thermal: "input/videos/muralha-noite-thermal.mp4"
+  weights: "weights/model.pth"
+  weights_search_dirs:
+    - "weights"
+    - "."
+  output_dir: "output/night_rgbt"
+  annotated_video: "output/night_rgbt/muralha-noite_def_rgbtcc_heatmap.mp4"
+  frame_counts_csv: "output/night_rgbt/frame_counts.csv"
+  summary_json: "output/night_rgbt/summary.json"
+  snapshots_dir: "output/night_rgbt/snapshots"
+
+runtime:
+  require_cuda: true
+  device: 0
+  batch_size: 16
+  auto_reduce_batch_on_oom: true
+  empty_cuda_cache_every_batches: 0
+  torch_float32_matmul_precision: "highest"
+  allow_tf32: true
+
+inference:
+  task: "density_count"
+  weight_format: "auto" # Options: auto, pth, safetensors, onnx, trt
+  imgsz: 640
+  conf: 0.18
+  iou: 0.65
+  max_det: 2000
+  classes:
+    - 0
+  augment: false
+  half: false
+  verbose: false
+  vid_stride: 1
+  rgb_mean: [0.485, 0.456, 0.406]
+  rgb_std: [0.229, 0.224, 0.225]
+  thermal_mean: [0.5, 0.5, 0.5]
+  thermal_std: [0.5, 0.5, 0.5]
+
+counting:
+  count_source: "density_map"
+  require_keypoints: false
+
+output:
+  output_resolution: [1280, 720]
+  save_annotated_video: true
+  save_frame_counts: true
+  save_summary: true
+  save_snapshot_every_n_frames: 30
+  save_density_heatmap: true
+  heatmap_colormap: "INFERNO"
+  heatmap_alpha: 0.6
+  video_codec: "mp4v"
+  progress_every_n_frames: 300
+  overlay:
+    enabled: true
+    font_scale: 0.6
+    thickness: 1
+
+mlflow:
+  enabled: true
+  experiment_name: "rgbt-crowd-counting-pipeline"
+  tracking_uri: "http://127.0.0.1:5000"
+  run_name: "DEF-rgbtcc-Night-Muralha"
+  tags:
+    environment: "production"
+    scene: "night"
+    model: "DEF-rgbtcc"
+    modalities: "RGB+Thermal"
+  log_params: true
+  log_step_metrics: true
+  log_artifacts: true
+  log_annotated_video: true
+  log_model: false
+  autolog_ultralytics: false

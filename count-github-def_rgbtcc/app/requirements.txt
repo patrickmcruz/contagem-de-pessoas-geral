@@ -1,0 +1,20 @@
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cu124
+ultralytics==8.4.50
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+torchaudio==2.6.0+cu124
+transformers
+safetensors
+onnxruntime
+timm
+einops
+pyyaml
+scipy
+requests_toolbelt
+tqdm
+typer
+defusedxml
+pytest
+psutil
+
