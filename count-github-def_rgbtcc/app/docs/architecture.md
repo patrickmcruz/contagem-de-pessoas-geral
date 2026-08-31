@@ -13,6 +13,7 @@ Este documento registra formalmente todas as decisões de arquitetura de softwar
 | **ADR 003** | Equalização Térmica Adaptativa (CLAHE no Espaço LAB) | Aceito | Processamento de Sinal Térmico |
 | **ADR 004** | Estratégia de Fallback Gracioso em Múltiplas Etapas (Homografia $\rightarrow$ FOV Crop) | Aceito | Resiliência e Tolerância a Falhas |
 | **ADR 005** | Arquitetura Desacoplada de Pré-processamento (`RGBTImageEqualizer` & CLI) | Aceito | Design de Software |
+| **ADR 006** | Esteira de Dados RGBT em Arquitetura Medalhão (Bronze $\rightarrow$ Silver $\rightarrow$ Gold) | Aceito | MLOps e Engenharia de Dados |
 
 ---
 
@@ -65,7 +66,7 @@ Ao redimensionar uma imagem diretamente (*stretching*), as proporções geométr
 
 ### Decisão de Arquitetura
 Adotamos o redimensionamento por **Letterboxing com Padding Neutro** (`_letterbox_resize`):
-1. O fator de escala $\text{scale} = \min(\frac{W_{\text{target}}}{W_{\text{orig}}}, \frac{H_{\text{target}}}{H_{\text{orig}}})$ é calculado para manter a proporção original perfeita.
+1. O fator de escala $\text{scale} = \min(\frac{W_{\text{target}}}{W_{\text{orig}}}, \frac{H_{\text{target}}}{H_{\text{orig}}})$ é calculated para manter a proporção original perfeita.
 2. A imagem é redimensionada usando interpolação adaptativa (`cv2.INTER_AREA` para redução, `cv2.INTER_CUBIC` para ampliação).
 3. A imagem redimensionada é centralizada sobre um canvas de resolução-alvo fixada (`1280×1024`), preenchendo as bordas restantes com padding escuro neutro `(0, 0, 0)`.
 
@@ -163,3 +164,33 @@ Projetamos a arquitetura do pré-processamento de forma **totalmente desacoplada
   - **Reutilização**: A classe pode ser acoplada no futuro via injeção de dependência na `CountingPipeline` ou rodar em background.
 - **Negativas / Riscos Mitigados**:
   - Criação de um script CLI adicional (organizado na raiz do projeto `app/`).
+
+---
+
+## ADR 006: Esteira de Dados RGBT em Arquitetura Medalhão (Bronze $\rightarrow$ Silver $\rightarrow$ Gold)
+
+### Status
+**Aceito** (Data: 31 de Agosto de 2026)
+
+### Contexto
+Para garantir a rastreabilidade, governança de dados e isolamento de etapas na esteira de pré-processamento e inferência de IA, é necessário organizar os dados em camadas bem definidas. A ausência dessa divisão dificulta o reprocessamento parcial, a inspeção de dados intermediários alinhados e a exportação limpa dos relatórios de contagem.
+
+### Decisão de Arquitetura
+Adotamos o padrão de **Arquitetura Medalhão (Medallion Architecture)** para a esteira de dados RGBT:
+
+1. **Camada Bronze (Mídias Brutas - Raw Ingestion)**:
+   - Armazena as imagens e vídeos brutos capturados diretamente pelos drones (ex: `DJI_0789_W.JPG` 8000×6000 e `DJI_0790_T.JPG` 640×512).
+   - Preserva os metadados de sensor sem qualquer alteração.
+2. **Camada Silver (Mídias Limpas e Alinhadas - Refined Layers)**:
+   - Contém o par de mídias pré-processadas via `RGBTImageEqualizer` (ADR 001 Homografia, ADR 002 Letterboxing, ADR 003 CLAHE Térmico).
+   - Armazena os pares alinhados em formato padronizado (`1280×1024 px`) e a imagem de auditoria de camadas (`layer_blend_check.jpg`).
+3. **Camada Gold (Produtos de Dados e Analíticos - Analytics Output)**:
+   - Produtos finais para tomada de decisão executiva: mapas de densidade populacional anotados (`annotated_heatmap.jpg`), estatísticas CSV (`frame_counts.csv`), relatórios JSON (`summary.json`) e telemetria MLflow.
+
+### Consequências
+- **Positivas**:
+  - **Governança e Rastreabilidade**: Isolamento total entre dados brutos, dados alinhados e resultados de inteligência.
+  - **Reprocessamento Eficiente**: Permite re-executar a contagem na Camada Gold sem precisar re-alinhar as imagens da Camada Silver.
+  - **Prática Padrão de Engenharia de Dados**: Alinhado com as melhores práticas de MLOps.
+- **Negativas / Riscos Mitigados**:
+  - Uso de espaço em disco para armazenar a camada Silver (mitigado pois imagens Silver possuem formato otimizado).

@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 """
-Command Line Interface to execute the DEF-rgbtcc Dual-Stream RGBT Crowd Counting Pipeline.
+Command Line Interface to execute the DEF-rgbtcc Dual-Stream RGBT Crowd Counting Pipeline
+with Medallion Data Architecture support (Bronze -> Silver -> Gold).
+
 Usage:
-    python run.py --config data_rgbt_day.yaml
-    python run.py --config data_rgbt_night.yaml
+    python run.py --config data_rgbt_images.yaml
+    python run.py --config data_rgbt_images.yaml --medallion --layer all
+    python run.py --config data_rgbt_images.yaml --layer silver
 """
 import argparse
 import logging
 import sys
 from pathlib import Path
 
-from head_counting import run_pipeline
+from head_counting import PipelineConfig, CountingPipeline, MedallionPipelineRunner, run_pipeline
 
 # Configure Logging
 logging.basicConfig(
@@ -31,6 +34,18 @@ def main() -> None:
         default="data_rgbt_day.yaml",
         help="Path to the YAML configuration file (default: data_rgbt_day.yaml)"
     )
+    parser.add_argument(
+        "-m", "--medallion",
+        action="store_true",
+        help="Enables Medallion Data Architecture (Bronze -> Silver -> Gold) execution"
+    )
+    parser.add_argument(
+        "-l", "--layer",
+        type=str,
+        choices=["all", "silver", "gold"],
+        default="all",
+        help="Target Medallion layer to execute ('all', 'silver', 'gold')"
+    )
     args = parser.parse_args()
 
     config_path = Path(args.config)
@@ -40,10 +55,25 @@ def main() -> None:
 
     logger.info(f"Starting pipeline execution with config: {config_path.name}")
     try:
-        summary = run_pipeline(config_path)
+        config = PipelineConfig.from_yaml(config_path)
+
+        if args.medallion or args.layer != "all":
+            runner = MedallionPipelineRunner(config=config, config_path=config_path)
+            if args.layer == "silver":
+                silver_rgb, silver_thermal = runner.run_silver()
+                logger.info(f"Silver layer processing completed: {silver_rgb}")
+                return
+            elif args.layer == "gold":
+                summary = runner.run_gold()
+            else:
+                summary = runner.run_all()
+        else:
+            pipeline = CountingPipeline(config=config, config_path=config_path)
+            summary = pipeline.run()
+
         logger.info("Pipeline executed successfully!")
 
-        # Print a short report summary to console
+        # Print executive summary report to console
         counts = summary.get("counts", {})
         print("\n" + "=" * 50)
         print("          RGBT CROWD COUNTING EXECUTION REPORT")
