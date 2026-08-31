@@ -1,0 +1,48 @@
+{
+  "app": "def-rgbtcc-crowd-counting-dji-images",
+  "video_rgb": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/input/images/DJI_0789_W.JPG",
+  "video_thermal": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/input/images/DJI_0790_T.JPG",
+  "weights": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/weights/model.pth",
+  "device": 0,
+  "video_meta": {
+    "width": 8000,
+    "height": 6000,
+    "fps": 1.0,
+    "frame_count": 1,
+    "duration_sec": 1.0,
+    "rgb": {
+      "width": 8000,
+      "height": 6000,
+      "fps": 1.0,
+      "frame_count": 1
+    },
+    "thermal": {
+      "width": 640,
+      "height": 512,
+      "fps": 1.0,
+      "frame_count": 1
+    }
+  },
+  "processed_frames": 1,
+  "elapsed_sec": 0.658,
+  "fps_processed": 1.519,
+  "inference": {
+    "device": 0,
+    "imgsz": 640,
+    "half": false,
+    "weight_format": "auto"
+  },
+  "counts": {
+    "min_people_in_frame": 479999,
+    "max_people_in_frame": 479999,
+    "mean_people_per_frame": 479999.938,
+    "median_people_per_frame": 479999.938,
+    "p95_people_per_frame": 479999.938
+  },
+  "outputs": {
+    "annotated_video": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/output/dji_images/dji_heatmap.mp4",
+    "frame_counts_csv": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/output/dji_images/frame_counts.csv",
+    "summary_json": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/output/dji_images/summary.json",
+    "snapshots_dir": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/output/dji_images/snapshots"
+  }
+}

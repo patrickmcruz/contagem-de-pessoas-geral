@@ -1,11 +1,11 @@
 """
-Video I/O Threading Module for Dual-Stream RGB-T
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Video & Image I/O Threading Module for Dual-Stream RGB-T
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This module provides multi-threaded I/O classes for dual-modality (RGB + Thermal) video processing:
-- `DualStreamVideoReader`: Decodes RGB and Thermal video feeds in background threads.
+This module provides multi-threaded I/O classes for dual-modality (RGB + Thermal) media processing:
+- `DualStreamVideoReader`: Decodes RGB and Thermal video feeds or image files/directories in background threads.
 - `DualStreamVideoWriterWrapper`: Renders colored density heatmaps, overlays banners,
-  resizes, writes to disk, and saves audit snapshots in background worker threads.
+  resizes, writes to disk, and saves audit snapshots/annotated images in background worker threads.
 - `VideoReader` / `VideoWriterWrapper`: Legacy single-stream compatibility adapters.
 """
 
@@ -14,7 +14,7 @@ import logging
 import queue
 import threading
 from pathlib import Path
-from typing import Any, Generator, Tuple
+from typing import Any, Generator, Tuple, List
 import cv2
 import numpy as np
 
@@ -22,13 +22,20 @@ from .config import PipelineConfig
 
 logger = logging.getLogger(__name__)
 
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+
+
+def is_image_file(path: Path) -> bool:
+    """Checks whether a given path points to a supported image file."""
+    return path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+
 
 class DualStreamVideoReader:
-    """Multi-threaded video reader that decodes RGB and Thermal frames in background threads.
+    """Multi-threaded reader that decodes RGB and Thermal video feeds or image pairs in background threads.
 
     Attributes:
-        video_rgb_path: Path to the target RGB video file.
-        video_thermal_path: Path to the target Thermal/Infrared video file (optional).
+        video_rgb_path: Path to the target RGB video/image file or directory.
+        video_thermal_path: Path to the target Thermal video/image file or directory (optional).
         stride: Stride factor; process every N-th frame.
         queue: Thread-safe queue containing decompressed (frame_rgb, frame_thermal, frame_idx).
         stop_event: Thread shutdown signal.
@@ -46,8 +53,8 @@ class DualStreamVideoReader:
         """Initializes DualStreamVideoReader and extracts stream metadata.
 
         Args:
-            video_rgb_path: Path to the primary RGB video file.
-            video_thermal_path: Path to the secondary Thermal video file.
+            video_rgb_path: Path to the primary RGB video or image file/dir.
+            video_thermal_path: Path to the secondary Thermal video or image file/dir.
             stride: Stride factor for skipping frames.
             queue_size: Maximum capacity of the frame buffer queue.
         """
@@ -61,18 +68,84 @@ class DualStreamVideoReader:
         self.thread: threading.Thread | None = None
         self.metadata: dict[str, Any] = {}
 
+        self._is_image_mode = False
+        self._is_dir_mode = False
+        self._rgb_files: List[Path] = []
+        self._thermal_files: List[Path] = []
+
         self._validate_and_extract_metadata()
 
     def _validate_and_extract_metadata(self) -> None:
-        """Validates video file availability and retrieves dimensions and fps settings.
+        """Validates file/directory availability and retrieves dimensions and fps settings.
 
         Raises:
-            FileNotFoundError: If the RGB video file does not exist.
-            RuntimeError: If OpenCV fails to open the video stream.
+            FileNotFoundError: If the RGB file/directory does not exist.
+            RuntimeError: If OpenCV fails to read the image or video stream.
         """
         if not self.video_rgb_path.exists():
-            raise FileNotFoundError(f"RGB video file not found at: {self.video_rgb_path}")
+            raise FileNotFoundError(f"RGB input not found at: {self.video_rgb_path}")
 
+        # 1. Directory of Images Mode
+        if self.video_rgb_path.is_dir():
+            self._is_dir_mode = True
+            all_rgb = sorted([p for p in self.video_rgb_path.glob("*") if p.suffix.lower() in IMAGE_EXTENSIONS])
+            # Filter Wide/RGB vs Thermal if in same dir
+            rgb_candidates = [p for p in all_rgb if "_T." not in p.name.upper()]
+            self._rgb_files = rgb_candidates if rgb_candidates else all_rgb
+
+            if not self._rgb_files:
+                raise FileNotFoundError(f"No image files found in directory: {self.video_rgb_path}")
+
+            if self.video_thermal_path and self.video_thermal_path.is_dir():
+                all_th = sorted([p for p in self.video_thermal_path.glob("*") if p.suffix.lower() in IMAGE_EXTENSIONS])
+                th_candidates = [p for p in all_th if "_W." not in p.name.upper()]
+                self._thermal_files = th_candidates if th_candidates else all_th
+
+            first_img = cv2.imread(str(self._rgb_files[0]))
+            if first_img is None:
+                raise RuntimeError(f"OpenCV failed to read image file: {self._rgb_files[0]}")
+
+            h, w = first_img.shape[:2]
+            count = len(self._rgb_files)
+
+            self.metadata = {
+                "width": w,
+                "height": h,
+                "fps": 1.0,
+                "frame_count": count,
+                "duration_sec": float(count),
+                "rgb": {"width": w, "height": h, "fps": 1.0, "frame_count": count},
+                "thermal": {"width": w, "height": h, "fps": 1.0, "frame_count": count},
+            }
+            return
+
+        # 2. Single Image File Mode
+        if is_image_file(self.video_rgb_path):
+            self._is_image_mode = True
+            img_rgb = cv2.imread(str(self.video_rgb_path))
+            if img_rgb is None:
+                raise RuntimeError(f"OpenCV failed to read RGB image: {self.video_rgb_path}")
+
+            h, w = img_rgb.shape[:2]
+            th_w, th_h = w, h
+
+            if self.video_thermal_path and is_image_file(self.video_thermal_path):
+                img_th = cv2.imread(str(self.video_thermal_path))
+                if img_th is not None:
+                    th_h, th_w = img_th.shape[:2]
+
+            self.metadata = {
+                "width": w,
+                "height": h,
+                "fps": 1.0,
+                "frame_count": 1,
+                "duration_sec": 1.0,
+                "rgb": {"width": w, "height": h, "fps": 1.0, "frame_count": 1},
+                "thermal": {"width": th_w, "height": th_h, "fps": 1.0, "frame_count": 1},
+            }
+            return
+
+        # 3. Video File Mode
         cap_rgb = cv2.VideoCapture(str(self.video_rgb_path))
         if not cap_rgb.isOpened():
             raise RuntimeError(f"OpenCV failed to open RGB video file: {self.video_rgb_path}")
@@ -85,7 +158,7 @@ class DualStreamVideoReader:
 
         metadata_thermal = {"width": width_rgb, "height": height_rgb, "fps": fps_rgb, "frame_count": count_rgb}
 
-        if self.video_thermal_path and self.video_thermal_path.exists():
+        if self.video_thermal_path and self.video_thermal_path.exists() and not self.video_thermal_path.is_dir():
             cap_th = cv2.VideoCapture(str(self.video_thermal_path))
             if cap_th.isOpened():
                 metadata_thermal = {
@@ -141,16 +214,50 @@ class DualStreamVideoReader:
 
     def _reader_worker(self) -> None:
         """Worker loop reading synchronized frames from RGB and Thermal feeds."""
-        cap_rgb = cv2.VideoCapture(str(self.video_rgb_path))
-        cap_thermal = (
-            cv2.VideoCapture(str(self.video_thermal_path))
-            if self.video_thermal_path and self.video_thermal_path.exists()
-            else None
-        )
-
-        frame_idx = 0
-
         try:
+            # Handle Directory of Images Mode
+            if self._is_dir_mode:
+                for idx, rgb_file in enumerate(self._rgb_files):
+                    if self.stop_event.is_set():
+                        break
+                    frame_rgb = cv2.imread(str(rgb_file))
+                    if frame_rgb is None:
+                        continue
+
+                    frame_thermal = None
+                    if idx < len(self._thermal_files):
+                        frame_thermal = cv2.imread(str(self._thermal_files[idx]))
+
+                    if frame_thermal is None:
+                        frame_thermal = frame_rgb.copy()
+
+                    if idx % self.stride == 0:
+                        self.queue.put((frame_rgb, frame_thermal, idx), block=True)
+                return
+
+            # Handle Single Image File Mode
+            if self._is_image_mode:
+                frame_rgb = cv2.imread(str(self.video_rgb_path))
+                frame_thermal = None
+                if self.video_thermal_path and is_image_file(self.video_thermal_path):
+                    frame_thermal = cv2.imread(str(self.video_thermal_path))
+
+                if frame_thermal is None:
+                    frame_thermal = frame_rgb.copy() if frame_rgb is not None else np.zeros((100, 100, 3), np.uint8)
+
+                if frame_rgb is not None:
+                    self.queue.put((frame_rgb, frame_thermal, 0), block=True)
+                return
+
+            # Handle Video File Mode
+            cap_rgb = cv2.VideoCapture(str(self.video_rgb_path))
+            cap_thermal = (
+                cv2.VideoCapture(str(self.video_thermal_path))
+                if self.video_thermal_path and self.video_thermal_path.exists() and not self.video_thermal_path.is_dir()
+                else None
+            )
+
+            frame_idx = 0
             while cap_rgb.isOpened() and not self.stop_event.is_set():
                 ok_rgb, frame_rgb = cap_rgb.read()
                 if not ok_rgb:
@@ -170,12 +277,14 @@ class DualStreamVideoReader:
                         continue
 
                 frame_idx += 1
-        except Exception as e:
-            logger.error(f"Error in DualStreamVideoReader worker: {e}", exc_info=True)
-        finally:
+
             cap_rgb.release()
             if cap_thermal:
                 cap_thermal.release()
+
+        except Exception as e:
+            logger.error(f"Error in DualStreamVideoReader worker: {e}", exc_info=True)
+        finally:
             try:
                 self.queue.put((None, None, None), block=True, timeout=2.0)
             except queue.Full:
@@ -195,7 +304,7 @@ class DualStreamVideoReader:
 
 
 class DualStreamVideoWriterWrapper:
-    """Multi-threaded writer rendering density heatmaps, text overlays, and writing output videos.
+    """Multi-threaded writer rendering density heatmaps, text overlays, and writing output videos and images.
 
     Attributes:
         config: The PipelineConfig instance.
@@ -248,11 +357,10 @@ class DualStreamVideoWriterWrapper:
             )
             logger.info(f"Initialized VideoWriter: {annotated_path.name} at {self.out_w}x{self.out_h} @ {fps}fps")
         except Exception as e:
-            logger.error(f"Failed to initialize VideoWriter: {e}")
-            self._writer = None
+            logger.error(f"Failed to initialize VideoWriter: {e}", exc_info=True)
 
     def __enter__(self) -> DualStreamVideoWriterWrapper:
-        """Context manager entry; starts background writer thread."""
+        """Context manager entry; automatically starts background writer thread."""
         self.start()
         return self
 
@@ -261,181 +369,156 @@ class DualStreamVideoWriterWrapper:
         self.stop()
 
     def start(self) -> None:
-        """Spawns background writer worker thread."""
+        """Starts background frame rendering worker thread."""
         self.stop_event.clear()
         self.thread = threading.Thread(target=self._writer_worker, daemon=True)
         self.thread.start()
-        logger.info("DualStreamVideoWriterWrapper worker thread started.")
+        logger.info("DualStreamVideoWriterWrapper thread started.")
 
     def stop(self) -> None:
-        """Pushes stop sentinel, waits for writer to finish queue items, and releases outputs."""
+        """Signals background writer thread to stop and blocks until finished."""
+        self.stop_event.set()
+        try:
+            self.queue.put(None, block=True, timeout=1.0)
+        except queue.Full:
+            pass
+
         if self.thread and self.thread.is_alive():
-            try:
-                self.queue.put(None, block=True, timeout=2.0)
-            except queue.Full:
-                pass
-            self.thread.join(timeout=10.0)
-            logger.info("DualStreamVideoWriterWrapper worker thread joined.")
+            self.thread.join(timeout=5.0)
+            logger.info("DualStreamVideoWriterWrapper thread joined successfully.")
 
         if self._writer is not None:
             self._writer.release()
             self._writer = None
-            logger.info("Released VideoWriter resource.")
 
     def write_result(self, result: Any, count: float | int, frame_idx: int, timestamp_sec: float) -> None:
-        """Enqueues inference results for heatmap rendering and frame writing.
+        """Enqueues prediction output for background rendering and writing.
 
         Args:
-            result: Result dictionary or object containing orig_img and density_map.
-            count: Number of heads/people estimated.
-            frame_idx: Index of current frame.
+            result: Raw inference result dict or object containing orig_img and density_map.
+            count: Estimated crowd count.
+            frame_idx: Active frame index.
             timestamp_sec: Frame timestamp in seconds.
         """
         try:
-            self.queue.put((result, count, frame_idx, timestamp_sec), block=True, timeout=1.0)
+            self.queue.put((result, count, frame_idx, timestamp_sec), block=True, timeout=0.5)
         except queue.Full:
-            logger.warning("Writer queue full. Dropping frame index: %d", frame_idx)
+            logger.warning(f"Writer queue full. Dropped output frame {frame_idx}.")
 
-    def _annotate_frame(self, result: Any, count: float | int, frame_idx: int, timestamp_sec: float) -> np.ndarray:
-        """Renders colored density heatmaps and text banners on top of the frame.
+    def _render_density_overlay(self, orig_img: np.ndarray, density_map: np.ndarray) -> np.ndarray:
+        """Renders 2D density map as colored heatmap and blends over original image.
 
         Args:
-            result: Result object or dictionary with keys 'orig_img' and 'density_map'.
-            count: Estimated crowd count.
-            frame_idx: Current frame index.
-            timestamp_sec: Frame time stamp in seconds.
+            orig_img: NumPy BGR array of original frame.
+            density_map: NumPy 2D array of predicted density values.
 
         Returns:
-            A NumPy array of the annotated image.
+            Blended BGR NumPy array frame.
         """
-        overlay_cfg = self.config.output.overlay
-        
-        # Extract original RGB image
-        if isinstance(result, dict):
-            orig_img = result.get("orig_img")
-            density_map = result.get("density_map")
-        elif hasattr(result, "orig_img"):
-            orig_img = result.orig_img
-            density_map = getattr(result, "density_map", None)
+        h, w = orig_img.shape[:2]
+
+        if density_map is None or density_map.size == 0:
+            return orig_img.copy()
+
+        # Resize density map to match original frame size
+        if density_map.shape[:2] != (h, w):
+            density_resized = cv2.resize(density_map.astype(np.float32), (w, h), interpolation=cv2.INTER_LINEAR)
         else:
-            orig_img = None
-            density_map = None
+            density_resized = density_map.astype(np.float32)
 
-        if orig_img is None:
-            return np.zeros((self.out_h, self.out_w, 3), dtype=np.uint8)
+        # Normalize to 0-255 for color mapping
+        d_min, d_max = density_resized.min(), density_resized.max()
+        if d_max > d_min:
+            norm_density = ((density_resized - d_min) / (d_max - d_min) * 255.0).astype(np.uint8)
+        else:
+            norm_density = np.zeros((h, w), dtype=np.uint8)
 
-        annotated = orig_img.copy()
+        # Apply colormap
+        cmap_name = self.config.output.heatmap_colormap.upper()
+        cmap_code = getattr(cv2, f"COLORMAP_{cmap_name}", cv2.COLORMAP_JET)
+        heatmap_color = cv2.applyColorMap(norm_density, cmap_code)
 
-        # Render density map heatmap overlay
-        if (
-            self.config.output.save_density_heatmap
-            and density_map is not None
-            and isinstance(density_map, np.ndarray)
-        ):
-            # Normalize density map to 0..255 range
-            d_min, d_max = density_map.min(), density_map.max()
-            if d_max > d_min:
-                normalized = ((density_map - d_min) / (d_max - d_min) * 255.0).astype(np.uint8)
-            else:
-                normalized = np.zeros_like(density_map, dtype=np.uint8)
-
-            colormap_name = self.config.output.heatmap_colormap.upper()
-            colormap_id = getattr(cv2, f"COLORMAP_{colormap_name}", cv2.COLORMAP_JET)
-            heatmap = cv2.applyColorMap(normalized, colormap_id)
-
-            # Resize heatmap to match image dimensions if needed
-            if heatmap.shape[:2] != annotated.shape[:2]:
-                heatmap = cv2.resize(heatmap, (annotated.shape[1], annotated.shape[0]))
-
-            alpha = self.config.output.heatmap_alpha
-            annotated = cv2.addWeighted(annotated, 1.0 - alpha, heatmap, alpha, 0)
-
-        # Legacy bounding box plot fallback if YOLO result object is provided
-        elif hasattr(result, "plot") and overlay_cfg.enabled:
-            annotated = result.plot(labels=False, conf=False, boxes=True, line_width=overlay_cfg.thickness)
-
-        if not overlay_cfg.enabled:
-            return annotated
-
-        font_scale = overlay_cfg.font_scale
-        thickness = overlay_cfg.thickness
-
-        # Draw red/orange RGBT count text banner at top-left
-        cv2.putText(
-            annotated,
-            f"Contagem RGBT: {count:.1f}",
-            (20, 40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            font_scale * 1.5,
-            (0, 85, 255),
-            thickness + 1,
-            cv2.LINE_AA,
-        )
-
-        # Draw frame index and timestamp at bottom-left
-        cv2.putText(
-            annotated,
-            f"Frame: {frame_idx} | Tempo: {timestamp_sec:.2f}s",
-            (20, annotated.shape[0] - 20),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            font_scale,
-            (255, 255, 255),
-            max(1, thickness),
-            cv2.LINE_AA,
-        )
-        return annotated
+        # Alpha blend overlay
+        alpha = float(self.config.output.heatmap_alpha)
+        blended = cv2.addWeighted(orig_img, 1.0 - alpha, heatmap_color, alpha, 0)
+        return blended
 
     def _writer_worker(self) -> None:
-        """Background loop pulling items, rendering heatmaps, writing video frames, and saving snapshots."""
-        snapshot_every = self.config.output.save_snapshot_every_n_frames
+        """Worker loop consuming result tasks and writing annotated frames to disk."""
+        snapshot_interval = self.config.output.save_snapshot_every_n_frames
         snapshots_dir = Path(self.config.paths.snapshots_dir)
-
-        if snapshot_every > 0:
+        if snapshot_interval > 0:
             snapshots_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            while True:
-                item = self.queue.get(block=True)
-                if item is None:
+        output_dir = Path(self.config.paths.output_dir)
+
+        while not self.stop_event.is_set() or not self.queue.empty():
+            try:
+                task = self.queue.get(block=True, timeout=0.2)
+                if task is None:
                     break
 
-                result, count, frame_idx, timestamp_sec = item
+                result, count, frame_idx, timestamp_sec = task
 
-                annotated = self._annotate_frame(result, count, frame_idx, timestamp_sec)
+                if isinstance(result, dict):
+                    orig_img = result.get("orig_img")
+                    density_map = result.get("density_map")
+                else:
+                    orig_img = getattr(result, "orig_img", None)
+                    density_map = getattr(result, "density_map", None)
 
+                if orig_img is None:
+                    continue
+
+                if self.config.output.save_density_heatmap and density_map is not None:
+                    canvas = self._render_density_overlay(orig_img, density_map)
+                else:
+                    canvas = orig_img.copy()
+
+                # Overlay banner
+                h_c, w_c = canvas.shape[:2]
+                banner_text = f"Pessoas: {count:.1f} | Frame: {frame_idx} | Tempo: {timestamp_sec:.2f}s"
+                cv2.rectangle(canvas, (10, 10), (min(w_c - 10, 520), 55), (0, 0, 0), -1)
+                cv2.putText(canvas, banner_text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
+
+                # Save single image file if frame_count is 1
+                if self.video_meta.get("frame_count", 0) == 1:
+                    image_out_path = output_dir / "annotated_heatmap.jpg"
+                    cv2.imwrite(str(image_out_path), canvas)
+                    logger.info(f"Annotated heatmap image saved to: {image_out_path}")
+
+                # Save periodic snapshot
+                if snapshot_interval > 0 and frame_idx % snapshot_interval == 0:
+                    snap_path = snapshots_dir / f"frame_{frame_idx:06d}.jpg"
+                    cv2.imwrite(str(snap_path), canvas)
+
+                # Write frame to video
                 if self._writer is not None:
-                    if annotated.shape[1] != self.out_w or annotated.shape[0] != self.out_h:
-                        annotated = cv2.resize(annotated, (self.out_w, self.out_h))
-                    self._writer.write(annotated)
+                    if (w_c, h_c) != (self.out_w, self.out_h):
+                        canvas = cv2.resize(canvas, (self.out_w, self.out_h), interpolation=cv2.INTER_AREA)
+                    self._writer.write(canvas)
 
-                if snapshot_every > 0 and frame_idx % snapshot_every == 0:
-                    filename = snapshots_dir / f"snapshot_frame_{frame_idx:06d}.jpg"
-                    cv2.imwrite(str(filename), annotated)
-
-        except Exception as e:
-            logger.error(f"Error in DualStreamVideoWriterWrapper worker: {e}", exc_info=True)
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logger.error(f"Error in DualStreamVideoWriterWorker: {e}", exc_info=True)
 
 
 # ============================================================================
-# LEGACY SINGLE-STREAM ADAPTERS FOR BACKWARD COMPATIBILITY
+# LEGACY ADAPTERS FOR BACKWARD COMPATIBILITY
 # ============================================================================
 
 class VideoReader(DualStreamVideoReader):
-    """Backward-compatible single stream VideoReader adapter."""
-
+    """Backward-compatible VideoReader adapter."""
     def __init__(self, video_path: str | Path, stride: int = 1, queue_size: int = 128):
-        super().__init__(
-            video_rgb_path=video_path,
-            video_thermal_path=None,
-            stride=stride,
-            queue_size=queue_size,
-        )
+        super().__init__(video_rgb_path=video_path, video_thermal_path=None, stride=stride, queue_size=queue_size)
 
     def iter_frames(self) -> Generator[Tuple[np.ndarray, int], None, None]:  # type: ignore[override]
-        for frame_rgb, _frame_thermal, idx in super().iter_frames():
-            yield frame_rgb, idx
+        for f_rgb, _, idx in super().iter_frames():
+            yield f_rgb, idx
 
 
 class VideoWriterWrapper(DualStreamVideoWriterWrapper):
     """Backward-compatible VideoWriterWrapper adapter."""
-    pass
+    def write_result(self, result: Any, count: float | int, frame_idx: int, timestamp_sec: float) -> None:
+        super().write_result(result, count, frame_idx, timestamp_sec)
