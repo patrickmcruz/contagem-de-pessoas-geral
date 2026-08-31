@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Standalone CLI Utility for RGBT Image Equalization & Preprocessing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Standalone CLI Utility for RGBT Image Equalization & Spatial Alignment (ADR 001)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Equalizes resolution, preserves aspect ratio via letterbox, and applies
-thermal contrast enhancement (CLAHE) on RGB and Thermal image pairs.
+Equalizes resolution, performs Homography Layer Alignment (SIFT/ORB + RANSAC),
+preserves aspect ratio via letterbox, and generates 50%/50% Layer Blend Check overlays.
 
 Usage:
     python preprocess_images.py --rgb input/images/DJI_0789_W.JPG \
                                 --thermal input/images/DJI_0790_T.JPG \
-                                --output input/images_equalized/
+                                --output input/images_equalized/ \
+                                --mode homography
 """
 
 import argparse
@@ -26,7 +27,7 @@ from head_counting.preprocessing import RGBTImageEqualizer
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Standalone CLI Utility for RGBT Dual-Stream Image Equalization"
+        description="Standalone CLI Utility for RGBT Dual-Stream Image Homography Alignment (ADR 001)"
     )
     parser.add_argument(
         "--rgb",
@@ -45,6 +46,13 @@ def main() -> None:
         type=str,
         default=str(APP_DIR / "input/images_equalized"),
         help="Target output directory for equalized image pair",
+    )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="homography",
+        choices=["homography", "crop"],
+        help="Alignment mode: 'homography' (ADR 001 SIFT/RANSAC) or 'crop' (FOV Center Crop)",
     )
     parser.add_argument(
         "--width",
@@ -76,12 +84,13 @@ def main() -> None:
     output_dir = Path(args.output)
 
     print("=" * 60)
-    print("       RGBT DUAL-STREAM IMAGE EQUALIZER (DECOUPLED)")
+    print("       RGBT LAYER HOMOGRAPHY EQUALIZER (ADR 001)")
     print("=" * 60)
     print(f"RGB Input:      {rgb_path}")
     print(f"Thermal Input:  {thermal_path}")
     print(f"Target Output:  {output_dir}")
     print(f"Target Size:    {args.width}x{args.height} px")
+    print(f"Alignment Mode: {args.mode.upper()} (SIFT/ORB + RANSAC)")
     print(f"Thermal CLAHE:  {not args.no_clahe}")
     print(f"Letterboxing:   {not args.no_letterbox}")
     print("=" * 60)
@@ -90,17 +99,19 @@ def main() -> None:
         target_size=(args.width, args.height),
         keep_aspect_ratio=not args.no_letterbox,
         thermal_clahe=not args.no_clahe,
+        mode=args.mode,
     )
 
-    out_rgb, out_thermal = equalizer.process_files(
+    out_rgb, out_thermal, out_blend = equalizer.process_files(
         rgb_path=rgb_path,
         thermal_path=thermal_path,
         output_dir=output_dir,
     )
 
-    print("\n[SUCCESS] Image equalization completed!")
-    print(f" ├─ Equalized RGB:     {out_rgb}")
-    print(f" └─ Equalized Thermal: {out_thermal}\n")
+    print("\n[SUCCESS] Homography layer equalization completed!")
+    print(f" ├─ Equalized RGB Layer:     {out_rgb}")
+    print(f" ├─ Equalized Thermal Layer: {out_thermal}")
+    print(f" └─ Layer Blend Check:       {out_blend}\n")
 
 
 if __name__ == "__main__":
