@@ -5,27 +5,27 @@
   "weights": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/weights/model.pth",
   "device": 0,
   "video_meta": {
-    "width": 8000,
-    "height": 6000,
+    "width": 1280,
+    "height": 1024,
     "fps": 1.0,
     "frame_count": 1,
     "duration_sec": 1.0,
     "rgb": {
-      "width": 8000,
-      "height": 6000,
+      "width": 1280,
+      "height": 1024,
       "fps": 1.0,
       "frame_count": 1
     },
     "thermal": {
-      "width": 640,
-      "height": 512,
+      "width": 1280,
+      "height": 1024,
       "fps": 1.0,
       "frame_count": 1
     }
   },
   "processed_frames": 1,
-  "elapsed_sec": 0.658,
-  "fps_processed": 1.519,
+  "elapsed_sec": 3.29,
+  "fps_processed": 0.304,
   "inference": {
     "device": 0,
     "imgsz": 640,
@@ -33,11 +33,11 @@
     "weight_format": "auto"
   },
   "counts": {
-    "min_people_in_frame": 479999,
-    "max_people_in_frame": 479999,
-    "mean_people_per_frame": 479999.938,
-    "median_people_per_frame": 479999.938,
-    "p95_people_per_frame": 479999.938
+    "min_people_in_frame": 13107,
+    "max_people_in_frame": 13107,
+    "mean_people_per_frame": 13107.198,
+    "median_people_per_frame": 13107.198,
+    "p95_people_per_frame": 13107.198
   },
   "outputs": {
     "annotated_video": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/app/output/dji_images/dji_heatmap.mp4",

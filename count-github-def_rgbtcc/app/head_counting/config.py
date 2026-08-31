@@ -135,6 +135,26 @@ class InferenceConfig:
 
 
 @dataclass
+class PreprocessingConfig:
+    """Settings for RGBT spatial alignment, homography, letterboxing, and thermal CLAHE.
+
+    Attributes:
+        enabled: Controls whether pre-processing alignment is applied to frames.
+        mode: Alignment algorithm ('homography', 'crop', 'none').
+        target_resolution: Target [width, height] tuple for equalized output matrices.
+        thermal_clahe: Enables CLAHE thermal contrast enhancement.
+        keep_aspect_ratio: Enables letterboxing to preserve aspect ratio.
+        clahe_clip_limit: Threshold limit for CLAHE.
+    """
+    enabled: bool = False
+    mode: str = "homography"
+    target_resolution: list[int] = field(default_factory=lambda: [1280, 1024])
+    thermal_clahe: bool = True
+    keep_aspect_ratio: bool = True
+    clahe_clip_limit: float = 2.5
+
+
+@dataclass
 class CountingConfig:
     """Target output detection features for people counts.
 
@@ -228,6 +248,7 @@ class PipelineConfig:
     paths: PathsConfig = field(default_factory=PathsConfig)
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     inference: InferenceConfig = field(default_factory=InferenceConfig)
+    preprocessing: PreprocessingConfig = field(default_factory=PreprocessingConfig)
     counting: CountingConfig = field(default_factory=CountingConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
     mlflow: MLflowConfig = field(default_factory=MLflowConfig)
@@ -322,6 +343,17 @@ class PipelineConfig:
             thermal_std=list(raw_inference.get("thermal_std", [0.5, 0.5, 0.5])),
         )
 
+        # Preprocessing Configuration
+        raw_prep = raw.get("preprocessing", {})
+        preprocessing = PreprocessingConfig(
+            enabled=bool(raw_prep.get("enabled", False)),
+            mode=str(raw_prep.get("mode", "homography")),
+            target_resolution=list(raw_prep.get("target_resolution", [1280, 1024])),
+            thermal_clahe=bool(raw_prep.get("thermal_clahe", True)),
+            keep_aspect_ratio=bool(raw_prep.get("keep_aspect_ratio", True)),
+            clahe_clip_limit=float(raw_prep.get("clahe_clip_limit", 2.5)),
+        )
+
         # Counting Configuration
         raw_counting = raw.get("counting", {})
         counting = CountingConfig(
@@ -374,6 +406,7 @@ class PipelineConfig:
             paths=paths,
             runtime=runtime,
             inference=inference,
+            preprocessing=preprocessing,
             counting=counting,
             output=output,
             mlflow=mlflow_cfg,
@@ -434,4 +467,3 @@ class PipelineConfig:
             self.paths.snapshots_dir = str(out_dir / "snapshots")
         else:
             self.paths.snapshots_dir = to_absolute(self.paths.snapshots_dir)
-

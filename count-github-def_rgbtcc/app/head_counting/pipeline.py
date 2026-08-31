@@ -184,7 +184,9 @@ class CountingPipeline:
             video_thermal = self.config.paths.video_thermal
 
             logger.info(f"Opening dual-stream video files: RGB='{video_rgb}', Thermal='{video_thermal}'")
-            with DualStreamVideoReader(video_rgb, video_thermal, stride=vid_stride) as reader:
+            with DualStreamVideoReader(
+                video_rgb, video_thermal, stride=vid_stride, preprocessing_config=self.config.preprocessing
+            ) as reader:
                 self.video_meta = reader.metadata
                 logger.info(f"Video metadata extracted: {json.dumps(self.video_meta)}")
 

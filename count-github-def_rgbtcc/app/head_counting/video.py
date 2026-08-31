@@ -3,7 +3,8 @@ Video & Image I/O Threading Module for Dual-Stream RGB-T
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This module provides multi-threaded I/O classes for dual-modality (RGB + Thermal) media processing:
-- `DualStreamVideoReader`: Decodes RGB and Thermal video feeds or image files/directories in background threads.
+- `DualStreamVideoReader`: Decodes RGB and Thermal video feeds or image files/directories in background threads,
+  with optional pre-processing alignment (ADR 001 Homography).
 - `DualStreamVideoWriterWrapper`: Renders colored density heatmaps, overlays banners,
   resizes, writes to disk, and saves audit snapshots/annotated images in background worker threads.
 - `VideoReader` / `VideoWriterWrapper`: Legacy single-stream compatibility adapters.
@@ -18,7 +19,8 @@ from typing import Any, Generator, Tuple, List
 import cv2
 import numpy as np
 
-from .config import PipelineConfig
+from .config import PipelineConfig, PreprocessingConfig
+from .preprocessing import RGBTImageEqualizer
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,7 @@ class DualStreamVideoReader:
         video_rgb_path: Path to the target RGB video/image file or directory.
         video_thermal_path: Path to the target Thermal video/image file or directory (optional).
         stride: Stride factor; process every N-th frame.
+        preprocessing_config: Optional PreprocessingConfig for homography and CLAHE.
         queue: Thread-safe queue containing decompressed (frame_rgb, frame_thermal, frame_idx).
         stop_event: Thread shutdown signal.
         thread: Background thread instance.
@@ -49,6 +52,7 @@ class DualStreamVideoReader:
         video_thermal_path: str | Path | None = None,
         stride: int = 1,
         queue_size: int = 128,
+        preprocessing_config: PreprocessingConfig | None = None,
     ):
         """Initializes DualStreamVideoReader and extracts stream metadata.
 
@@ -57,10 +61,12 @@ class DualStreamVideoReader:
             video_thermal_path: Path to the secondary Thermal video or image file/dir.
             stride: Stride factor for skipping frames.
             queue_size: Maximum capacity of the frame buffer queue.
+            preprocessing_config: Optional PreprocessingConfig instance.
         """
         self.video_rgb_path = Path(video_rgb_path)
         self.video_thermal_path = Path(video_thermal_path) if video_thermal_path else None
         self.stride = max(1, stride)
+        self.preprocessing_config = preprocessing_config
         self.queue: queue.Queue[
             Tuple[np.ndarray, np.ndarray, int] | Tuple[None, None, None]
         ] = queue.Queue(maxsize=queue_size)
@@ -73,23 +79,36 @@ class DualStreamVideoReader:
         self._rgb_files: List[Path] = []
         self._thermal_files: List[Path] = []
 
+        self.equalizer: RGBTImageEqualizer | None = None
+        if self.preprocessing_config and self.preprocessing_config.enabled:
+            target_res = tuple(self.preprocessing_config.target_resolution)
+            self.equalizer = RGBTImageEqualizer(
+                target_size=(target_res[0], target_res[1]),
+                keep_aspect_ratio=self.preprocessing_config.keep_aspect_ratio,
+                thermal_clahe=self.preprocessing_config.thermal_clahe,
+                clahe_clip_limit=self.preprocessing_config.clahe_clip_limit,
+                mode=self.preprocessing_config.mode,
+            )
+            logger.info(
+                f"[PREPROCESSING] Enabled: Mode={self.preprocessing_config.mode.upper()}, "
+                f"TargetRes={target_res}, CLAHE={self.preprocessing_config.thermal_clahe}"
+            )
+
         self._validate_and_extract_metadata()
 
     def _validate_and_extract_metadata(self) -> None:
-        """Validates file/directory availability and retrieves dimensions and fps settings.
-
-        Raises:
-            FileNotFoundError: If the RGB file/directory does not exist.
-            RuntimeError: If OpenCV fails to read the image or video stream.
-        """
+        """Validates file/directory availability and retrieves dimensions and fps settings."""
         if not self.video_rgb_path.exists():
             raise FileNotFoundError(f"RGB input not found at: {self.video_rgb_path}")
+
+        target_w, target_h = None, None
+        if self.equalizer:
+            target_w, target_h = self.equalizer.target_w, self.equalizer.target_h
 
         # 1. Directory of Images Mode
         if self.video_rgb_path.is_dir():
             self._is_dir_mode = True
             all_rgb = sorted([p for p in self.video_rgb_path.glob("*") if p.suffix.lower() in IMAGE_EXTENSIONS])
-            # Filter Wide/RGB vs Thermal if in same dir
             rgb_candidates = [p for p in all_rgb if "_T." not in p.name.upper()]
             self._rgb_files = rgb_candidates if rgb_candidates else all_rgb
 
@@ -106,16 +125,18 @@ class DualStreamVideoReader:
                 raise RuntimeError(f"OpenCV failed to read image file: {self._rgb_files[0]}")
 
             h, w = first_img.shape[:2]
+            out_w = target_w if target_w else w
+            out_h = target_h if target_h else h
             count = len(self._rgb_files)
 
             self.metadata = {
-                "width": w,
-                "height": h,
+                "width": out_w,
+                "height": out_h,
                 "fps": 1.0,
                 "frame_count": count,
                 "duration_sec": float(count),
-                "rgb": {"width": w, "height": h, "fps": 1.0, "frame_count": count},
-                "thermal": {"width": w, "height": h, "fps": 1.0, "frame_count": count},
+                "rgb": {"width": out_w, "height": out_h, "fps": 1.0, "frame_count": count},
+                "thermal": {"width": out_w, "height": out_h, "fps": 1.0, "frame_count": count},
             }
             return
 
@@ -134,14 +155,17 @@ class DualStreamVideoReader:
                 if img_th is not None:
                     th_h, th_w = img_th.shape[:2]
 
+            out_w = target_w if target_w else w
+            out_h = target_h if target_h else h
+
             self.metadata = {
-                "width": w,
-                "height": h,
+                "width": out_w,
+                "height": out_h,
                 "fps": 1.0,
                 "frame_count": 1,
                 "duration_sec": 1.0,
-                "rgb": {"width": w, "height": h, "fps": 1.0, "frame_count": 1},
-                "thermal": {"width": th_w, "height": th_h, "fps": 1.0, "frame_count": 1},
+                "rgb": {"width": out_w, "height": out_h, "fps": 1.0, "frame_count": 1},
+                "thermal": {"width": out_w, "height": out_h, "fps": 1.0, "frame_count": 1},
             }
             return
 
@@ -156,14 +180,17 @@ class DualStreamVideoReader:
         count_rgb = int(cap_rgb.get(cv2.CAP_PROP_FRAME_COUNT))
         cap_rgb.release()
 
-        metadata_thermal = {"width": width_rgb, "height": height_rgb, "fps": fps_rgb, "frame_count": count_rgb}
+        out_w = target_w if target_w else width_rgb
+        out_h = target_h if target_h else height_rgb
+
+        metadata_thermal = {"width": out_w, "height": out_h, "fps": fps_rgb, "frame_count": count_rgb}
 
         if self.video_thermal_path and self.video_thermal_path.exists() and not self.video_thermal_path.is_dir():
             cap_th = cv2.VideoCapture(str(self.video_thermal_path))
             if cap_th.isOpened():
                 metadata_thermal = {
-                    "width": int(cap_th.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                    "height": int(cap_th.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                    "width": out_w,
+                    "height": out_h,
                     "fps": float(cap_th.get(cv2.CAP_PROP_FPS)),
                     "frame_count": int(cap_th.get(cv2.CAP_PROP_FRAME_COUNT)),
                 }
@@ -173,12 +200,12 @@ class DualStreamVideoReader:
         duration_sec = count_rgb / fps if fps > 0 else 0.0
 
         self.metadata = {
-            "width": width_rgb,
-            "height": height_rgb,
+            "width": out_w,
+            "height": out_h,
             "fps": fps,
             "frame_count": count_rgb,
             "duration_sec": duration_sec,
-            "rgb": {"width": width_rgb, "height": height_rgb, "fps": fps_rgb, "frame_count": count_rgb},
+            "rgb": {"width": out_w, "height": out_h, "fps": fps_rgb, "frame_count": count_rgb},
             "thermal": metadata_thermal,
         }
 
@@ -231,6 +258,9 @@ class DualStreamVideoReader:
                     if frame_thermal is None:
                         frame_thermal = frame_rgb.copy()
 
+                    if self.equalizer:
+                        frame_rgb, frame_thermal = self.equalizer.process_pair(frame_rgb, frame_thermal)
+
                     if idx % self.stride == 0:
                         self.queue.put((frame_rgb, frame_thermal, idx), block=True)
                 return
@@ -246,6 +276,8 @@ class DualStreamVideoReader:
                     frame_thermal = frame_rgb.copy() if frame_rgb is not None else np.zeros((100, 100, 3), np.uint8)
 
                 if frame_rgb is not None:
+                    if self.equalizer:
+                        frame_rgb, frame_thermal = self.equalizer.process_pair(frame_rgb, frame_thermal)
                     self.queue.put((frame_rgb, frame_thermal, 0), block=True)
                 return
 
@@ -271,6 +303,8 @@ class DualStreamVideoReader:
                     frame_thermal = frame_rgb.copy()
 
                 if frame_idx % self.stride == 0:
+                    if self.equalizer:
+                        frame_rgb, frame_thermal = self.equalizer.process_pair(frame_rgb, frame_thermal)
                     try:
                         self.queue.put((frame_rgb, frame_thermal, frame_idx), block=True, timeout=0.1)
                     except queue.Full:
@@ -420,25 +454,21 @@ class DualStreamVideoWriterWrapper:
         if density_map is None or density_map.size == 0:
             return orig_img.copy()
 
-        # Resize density map to match original frame size
         if density_map.shape[:2] != (h, w):
             density_resized = cv2.resize(density_map.astype(np.float32), (w, h), interpolation=cv2.INTER_LINEAR)
         else:
             density_resized = density_map.astype(np.float32)
 
-        # Normalize to 0-255 for color mapping
         d_min, d_max = density_resized.min(), density_resized.max()
         if d_max > d_min:
             norm_density = ((density_resized - d_min) / (d_max - d_min) * 255.0).astype(np.uint8)
         else:
             norm_density = np.zeros((h, w), dtype=np.uint8)
 
-        # Apply colormap
         cmap_name = self.config.output.heatmap_colormap.upper()
         cmap_code = getattr(cv2, f"COLORMAP_{cmap_name}", cv2.COLORMAP_JET)
         heatmap_color = cv2.applyColorMap(norm_density, cmap_code)
 
-        # Alpha blend overlay
         alpha = float(self.config.output.heatmap_alpha)
         blended = cv2.addWeighted(orig_img, 1.0 - alpha, heatmap_color, alpha, 0)
         return blended

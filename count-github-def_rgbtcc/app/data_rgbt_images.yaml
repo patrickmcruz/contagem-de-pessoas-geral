@@ -2,7 +2,8 @@
 # DEF-rgbtcc RGB-T Crowd Counting - DJI Images Configuration
 # ============================================================================
 # Configuration for DEF-rgbtcc dual-modality (RGB + Thermal) crowd counting
-# on DJI Drone Image pairs (DJI_0789_W.JPG / DJI_0790_T.JPG).
+# on DJI Drone Image pairs (DJI_0789_W.JPG / DJI_0790_T.JPG) with ADR 001
+# Spatial Homography Layer Alignment & Thermal CLAHE Pre-processing.
 # ============================================================================
 
 app:
@@ -28,6 +29,14 @@ paths:
   frame_counts_csv: "output/dji_images/frame_counts.csv"
   summary_json: "output/dji_images/summary.json"
   snapshots_dir: "output/dji_images/snapshots"
+
+preprocessing:
+  enabled: true
+  mode: "homography"
+  target_resolution: [1280, 1024]
+  thermal_clahe: true
+  keep_aspect_ratio: true
+  clahe_clip_limit: 2.5
 
 runtime:
   require_cuda: false
@@ -61,7 +70,7 @@ counting:
   require_keypoints: false
 
 output:
-  output_resolution: [1280, 720]
+  output_resolution: [1280, 1024]
   save_annotated_video: true
   save_frame_counts: true
   save_summary: true
