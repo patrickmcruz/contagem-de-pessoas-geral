@@ -148,6 +148,9 @@ class PreprocessingConfig:
         thermal_clahe: Enables CLAHE thermal contrast enhancement.
         keep_aspect_ratio: Enables letterboxing to preserve aspect ratio.
         clahe_clip_limit: Threshold limit for CLAHE.
+        ground_pitch_compensation: Enables ADR 007 ground-plane pitch-aware affine warp.
+        pitch_gradient_x: Horizontal disparity gradient per vertical unit.
+        pitch_gradient_y: Vertical disparity gradient per vertical unit.
     """
     enabled: bool = False
     mode: str = "homography"
@@ -155,6 +158,9 @@ class PreprocessingConfig:
     thermal_clahe: bool = True
     keep_aspect_ratio: bool = True
     clahe_clip_limit: float = 2.5
+    ground_pitch_compensation: bool = False
+    pitch_gradient_x: float = 0.0
+    pitch_gradient_y: float = 0.0
 
 
 @dataclass

@@ -58,6 +58,9 @@ class MedallionPipelineRunner:
             thermal_clahe=prep_cfg.thermal_clahe,
             clahe_clip_limit=prep_cfg.clahe_clip_limit,
             mode=prep_cfg.mode,
+            ground_pitch_compensation=getattr(prep_cfg, "ground_pitch_compensation", False),
+            pitch_gradient_x=getattr(prep_cfg, "pitch_gradient_x", 0.0),
+            pitch_gradient_y=getattr(prep_cfg, "pitch_gradient_y", 0.0),
         )
 
     def _ensure_directories(self) -> None:

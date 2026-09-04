@@ -55,6 +55,9 @@ class RGBTImageEqualizer:
         undistort_lens: bool = True,
         shift_rgb_x: int = -22,
         shift_rgb_y: int = -23,
+        ground_pitch_compensation: bool = False,
+        pitch_gradient_x: float = 0.0,
+        pitch_gradient_y: float = 0.0,
         mode: str = "homography",
     ):
         """Initializes RGBTImageEqualizer settings.
@@ -67,8 +70,11 @@ class RGBTImageEqualizer:
             clahe_tile_grid: CLAHE tile grid dimensions tuple.
             fov_crop_ratio: Wide RGB center crop height ratio matching Thermal HFOV (default 0.70).
             undistort_lens: Corrects 24mm Wide lens barrel distortion.
-            shift_rgb_x: Direct horizontal shift in pixels for RGB (default -15px left).
-            shift_rgb_y: Direct vertical shift in pixels for RGB (default -16px up).
+            shift_rgb_x: Direct horizontal shift in pixels for RGB (default -22px left).
+            shift_rgb_y: Direct vertical shift in pixels for RGB (default -23px up).
+            ground_pitch_compensation: Enables ADR 007 ground-plane pitch-aware affine warp.
+            pitch_gradient_x: Horizontal disparity gradient per vertical unit (ADR 007).
+            pitch_gradient_y: Vertical disparity gradient per vertical unit (ADR 007).
             mode: Alignment mode ("homography", "affine", or "crop").
         """
         self.target_w, self.target_h = target_size
@@ -80,6 +86,9 @@ class RGBTImageEqualizer:
         self.undistort_lens = undistort_lens
         self.shift_rgb_x = shift_rgb_x
         self.shift_rgb_y = shift_rgb_y
+        self.ground_pitch_compensation = ground_pitch_compensation
+        self.pitch_gradient_x = pitch_gradient_x
+        self.pitch_gradient_y = pitch_gradient_y
         self.mode = mode.lower()
 
         self._clahe = (
@@ -321,10 +330,18 @@ class RGBTImageEqualizer:
         rgb_eq = self._letterbox_resize(rgb_aligned)
         thermal_eq = self._letterbox_resize(thermal_enhanced)
 
-        # Apply fine-tuning translation shift strictly to RGB image
-        if self.shift_rgb_x != 0 or self.shift_rgb_y != 0:
-            M_shift = np.float32([[1, 0, self.shift_rgb_x], [0, 1, self.shift_rgb_y]])
-            rgb_eq = cv2.warpAffine(rgb_eq, M_shift, (self.target_w, self.target_h))
+        # Apply fine-tuning ground-plane affine alignment (ADR 001 & ADR 007)
+        if self.shift_rgb_x != 0 or self.shift_rgb_y != 0 or self.ground_pitch_compensation:
+            if self.ground_pitch_compensation and (self.pitch_gradient_x != 0.0 or self.pitch_gradient_y != 0.0):
+                # ADR 007: Ground-Plane Pitch-Aware Affine Warping
+                yc = self.target_h / 2.0
+                M_align = np.float32([
+                    [1.0, self.pitch_gradient_x, self.shift_rgb_x - self.pitch_gradient_x * yc],
+                    [0.0, 1.0 + self.pitch_gradient_y, self.shift_rgb_y - self.pitch_gradient_y * yc],
+                ])
+            else:
+                M_align = np.float32([[1, 0, self.shift_rgb_x], [0, 1, self.shift_rgb_y]])
+            rgb_eq = cv2.warpAffine(rgb_eq, M_align, (self.target_w, self.target_h))
 
         return rgb_eq, thermal_eq
 

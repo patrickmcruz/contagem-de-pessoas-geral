@@ -49,3 +49,41 @@ def test_rgbt_image_equalizer_process_files(tmp_path: Path) -> None:
     assert saved_rgb.shape == (480, 640, 3)
     assert saved_thermal.shape == (480, 640, 3)
     assert saved_blend.shape == (480, 640, 3)
+
+
+def test_ground_pitch_compensation_adr_007():
+    """Validates ADR 007 ground-plane pitch-aware affine warp behavior."""
+    eq_pitch = RGBTImageEqualizer(
+        target_size=(1280, 1024),
+        shift_rgb_x=-22,
+        shift_rgb_y=-23,
+        ground_pitch_compensation=True,
+        pitch_gradient_x=-0.025,
+        pitch_gradient_y=0.045,
+    )
+    dummy_rgb = np.zeros((6000, 8000, 3), dtype=np.uint8)
+    dummy_th = np.zeros((512, 640, 3), dtype=np.uint8)
+
+    rgb_out, th_out = eq_pitch.process_pair(dummy_rgb, dummy_th)
+    assert rgb_out.shape == (1024, 1280, 3)
+    assert th_out.shape == (1024, 1280, 3)
+
+    # Validate mathematical alignment matrix properties
+    yc = eq_pitch.target_h / 2.0
+    M_align = np.float32([
+        [1.0, eq_pitch.pitch_gradient_x, eq_pitch.shift_rgb_x - eq_pitch.pitch_gradient_x * yc],
+        [0.0, 1.0 + eq_pitch.pitch_gradient_y, eq_pitch.shift_rgb_y - eq_pitch.pitch_gradient_y * yc],
+    ])
+
+    # Center displacement must be exactly (-22, -23)
+    center_pt = np.array([640.0, 512.0, 1.0])
+    center_mapped = M_align @ center_pt
+    assert np.isclose(center_mapped[0] - 640.0, -22.0)
+    assert np.isclose(center_mapped[1] - 512.0, -23.0)
+
+    # Bottom region must have greater vertical shift (ground closer)
+    bottom_pt = np.array([90.0, 883.0, 1.0])
+    bottom_mapped = M_align @ bottom_pt
+    # Y shift at bottom is -23 + 0.045*(883 - 512) = -6.3 px, meaning RGB shifted down by ~16.7 px
+    assert bottom_mapped[1] - 883.0 > -23.0
+

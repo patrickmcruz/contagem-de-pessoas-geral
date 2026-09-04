@@ -14,6 +14,7 @@ Este documento registra formalmente todas as decisões de arquitetura de softwar
 | **ADR 004** | Estratégia de Fallback Gracioso em Múltiplas Etapas (Affine $\rightarrow$ FOV Crop) | Aceito | Resiliência e Tolerância a Falhas |
 | **ADR 005** | Arquitetura Desacoplada de Pré-processamento (`RGBTImageEqualizer` & CLI) | Aceito | Design de Software |
 | **ADR 006** | Mapeamento de Camadas Medalhão (Landing $\rightarrow$ Silver $\rightarrow$ Gold) | Aceito | MLOps e Engenharia de Dados |
+| **ADR 007** | Co-registro Afim com Gradiente de Perspectiva de Solo para Compensação de Paralaxe Oblíqua | Aceito | Alinhamento Espacial |
 
 ---
 
@@ -190,3 +191,34 @@ Mapeamos explicitamente os diretórios do projeto para as 3 zonas da Arquitetura
 - **Positivas**:
   - **Familiaridade**: Mapeia diretamente os diretórios existentes (`input/images/` $\rightarrow$ Landing, `input/images_equalized/` $\rightarrow$ Silver, `output/` $\rightarrow$ Gold).
   - **Governança**: Rastreabilidade completa dos dados desde o estado bruto de sensor até o relatório analítico final.
+
+---
+
+## ADR 007: Co-registro Afim com Gradiente de Perspectiva de Solo para Compensação de Paralaxe Oblíqua (Ground-Plane Pitch-Aware Affine Warping)
+
+### Status
+**Rejeitado / Supercedido pela Análise de Limite Físico 3D** (Atualizado em 02 de Setembro de 2026)
+
+### Contexto
+No co-registro espacial biespectral RGB-T (definido no **ADR 001**), imagens capturadas pelo drone DJI Mavic 2 Enterprise Advanced apresentavam alinhamento milimétrico na região central da cena através do vetor de translação calibrado `(shift_rgb_x = -22, shift_rgb_y = -23)`. Contudo, ao inspecionar o canto inferior esquerdo, observava-se um desalinhamento residual nas silhuetas de pedestres.
+
+Hipotetizou-se que uma transformação afim com gradiente de inclinação (*pitch*) dependente de $Y$ poderia compensar a variação de distância do solo ($Z$).
+
+### Teste Experimental e Diagnóstico Conclusivo
+A implementação do gradiente afim de profundidade revelou dois problemas críticos durante a auditoria visual:
+1. **Regressão na Região Central**:
+   Ao introduzir gradientes lineares ($k_y = 0.045$), qualquer elemento situado fora do eixo exato $y=512$ (como os pedestres e a mulher centralizada em $y \approx 647$) sofreu um deslocamento artificial indesejado de $+6.1\text{ px}$ em Y e $-3.4\text{ px}$ em X, gerando efeito fantasma duplo e destruindo o alinhamento que já era perfeito.
+2. **Causa Real no Canto: Paralaxe Tridimensional de Altura (3D Relief Parallax)**:
+   Uma auditoria fina no recorte do canto inferior esquerdo ($195 \times 163\text{ px}$) revelou vetores de deslocamento divergentes no mesmo quadrante:
+   - Linha do solo (calçada): residual de apenas $-1\text{ px}$ em X e $-5\text{ px}$ em Y (o solo está praticamente alinhado).
+   - Pessoa 1 (de laranja, no topo do recorte): residual de $+1\text{ px}$ em X e $-7\text{ px}$ em Y.
+   - Pessoa 2 (à frente, na base do recorte): residual de $+5\text{ px}$ em X e $+12\text{ px}$ em Y.
+   Essa divergência em direções opostas comprova que a discrepância não é causada por uma inclinação planar afim global, mas sim pela **projeção cônica de corpos tridimensionais (1,70m de altura) nas bordas extremas de lentes grande-angulares**. Em lentes com campo de visão amplo, objetos 3D distantes do centro óptico "tombam" radialmente para fora, gerando uma disparidade entre a cabeça e a base dos pés que **nenhuma transformação 2D plana única pode corrigir sem deformar o resto da imagem**.
+
+### Decisão Final de Arquitetura
+1. **Manter a Translação Pura Calibrada `(shift_rgb_x = -22, shift_rgb_y = -23)`**:
+   O parâmetro `ground_pitch_compensation` é desativado por padrão (`False`), preservando 100% da integridade anatômica e o alinhamento comprovado no corpo principal da cena.
+2. **Registro de Limitação Física de Sensoriamento**:
+   Registra-se formalmente que desalinhamentos locais pontuais em quinas extremas decorrentes de relevo tridimensional e aberração de borda são inerentes a sensores estéreos aéreos sem mapa denso de profundidade (DEM). Forçar deformações afins globais causa mais dano à IA no centro da cena do que o ganho marginal na periferia.
+
+
