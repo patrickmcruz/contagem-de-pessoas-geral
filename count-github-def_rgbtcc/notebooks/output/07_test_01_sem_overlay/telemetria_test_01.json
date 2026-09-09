@@ -1,0 +1,17 @@
+{
+  "origem_dados": "notebooks/test_01/",
+  "arquivo_rgb": "notebooks/test_01/02_rgb_equalized_undistort_shift.jpg",
+  "arquivo_termico": "notebooks/test_01/03_thermal_equalized_clahe.jpg",
+  "dimensoes_originais": "1280x1024",
+  "resolucao_grade_inferencia": "672x448 (6 patches de 224x224)",
+  "tempo_inferencia_ms": 246.46,
+  "densidade_integral_total": 687.57,
+  "usou_imagem_overlay_blend": false,
+  "projecao_visual_realizada": "Diretamente sobre a imagem RGB original (02_rgb_equalized_undistort_shift.jpg)",
+  "artefatos": {
+    "painel_comparativo": "notebooks/output/07_test_01_sem_overlay/painel_test_01_rgb_termica.jpg",
+    "heatmap_sobre_rgb": "notebooks/output/07_test_01_sem_overlay/heatmap_sobre_rgb.jpg",
+    "heatmap_sobre_termica": "notebooks/output/07_test_01_sem_overlay/heatmap_sobre_termica.jpg",
+    "heatmap_puro": "notebooks/output/07_test_01_sem_overlay/heatmap_puro_densidade.jpg"
+  }
+}

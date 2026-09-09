@@ -1,0 +1,19 @@
+{
+  "projeto": "contagem-de-pessoas-rgbt",
+  "modelo": "DualStreamRGBTNet (Density Map Regression)",
+  "dispositivo": "cuda",
+  "entradas": {
+    "rgb": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/data/gold/manually/rgb_final.jpg",
+    "thermal": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/data/gold/manually/thermal_final.jpg",
+    "blend": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/data/gold/manually/blend_alta_precisao_app_final.jpg"
+  },
+  "contagem_pessoas_estimada": 58,
+  "soma_integral_densidade": 58.0,
+  "tempo_inferencia_ms": 584.0,
+  "artefatos_gerados": {
+    "painel_comparativo": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/output/05_contagem/painel_contagem_multimodal.jpg",
+    "zoom_roi_pedestres": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/output/05_contagem/zoom_roi_pedestres_densidade.jpg",
+    "imagem_anotada": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/output/05_contagem/contagem_final_anotada.jpg",
+    "density_map_npy": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/output/05_contagem/density_map.npy"
+  }
+}

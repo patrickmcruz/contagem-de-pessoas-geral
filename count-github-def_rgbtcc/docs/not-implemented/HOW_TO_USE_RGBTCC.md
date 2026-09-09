@@ -195,3 +195,4 @@ Antes de alimentar qualquer nova imagem no modelo para contagem em produção, v
 - [ ] **3 Canais Válidos**: A imagem térmica possui 3 canais e não está salva como escala de cinza mono-canal não convertida.
 - [ ] **Resolução Ajustada**: Imagens pré-processadas para $672 \times 448$ (ou $640 \times 512$).
 - [ ] **Sem Letterbox Preto no Fatiamento**: Não utilizar barras pretas que cruzem patches de $224 \times 224$, pois bordas artificiais de alto contraste geram falsos positivos de cabeça.
+

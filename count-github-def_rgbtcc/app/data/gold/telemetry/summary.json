@@ -24,8 +24,8 @@
     }
   },
   "processed_frames": 1,
-  "elapsed_sec": 0.058,
-  "fps_processed": 17.139,
+  "elapsed_sec": 0.055,
+  "fps_processed": 18.308,
   "inference": {
     "device": 0,
     "imgsz": 640,
