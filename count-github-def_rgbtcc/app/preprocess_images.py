@@ -123,9 +123,9 @@ def main() -> int:
             output_dir=output_dir,
         )
         print("\n[SUCCESS] Medallion Silver layer equalization completed!")
-        print(f" ├─ Equalized RGB Layer:     {out_rgb}")
-        print(f" ├─ Equalized Thermal Layer: {out_th}")
-        print(f" └─ Layer Blend Check:       {out_blend}")
+        print(f" |-- Equalized RGB Layer:     {out_rgb}")
+        print(f" |-- Equalized Thermal Layer: {out_th}")
+        print(f" \-- Layer Blend Check:       {out_blend}")
         return 0
     except Exception as e:
         logger.error(f"Error during preprocessing: {e}", exc_info=True)
