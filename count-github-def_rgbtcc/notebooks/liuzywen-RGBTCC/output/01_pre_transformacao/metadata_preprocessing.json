@@ -1,0 +1,28 @@
+{
+  "pipeline_stage": "01_pre_transformacao_alinhamento",
+  "architecture_target": "liuzywen-RGBTCC (BMVC 2022)",
+  "timestamp": "2026-09-10 01:26:56",
+  "resolution": {
+    "width": 1280,
+    "height": 1024,
+    "channels": 3
+  },
+  "calibration": {
+    "undistort_model": "Brown-Conrady",
+    "fov_matching": "Central-Crop-Ratio-0.58",
+    "thermal_clahe": {
+      "clipLimit": 3.0,
+      "tileGridSize": [
+        8,
+        8
+      ]
+    },
+    "alignment": "Homography Ground Plane Co-registration"
+  },
+  "artifacts_generated": [
+    "rgb_preprocessed.jpg",
+    "thermal_preprocessed.jpg",
+    "blend_alta_precisao.jpg",
+    "painel_alinhamento_multimodal.jpg"
+  ]
+}

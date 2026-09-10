@@ -1,0 +1,31 @@
+{
+  "pipeline_stage": "02_contagem_pessoas_rgbtcc",
+  "architecture": "liuzywen-RGBTCC (BMVC 2022)",
+  "paper": "RGB-T Multi-Modal Crowd Counting Based on Transformer (Liu et al., 2022)",
+  "timestamp": "2026-09-10 01:27:35",
+  "compute_device": "cpu",
+  "latency_ms": 701.72,
+  "fps": 1.43,
+  "input_resolution": {
+    "width": 1280,
+    "height": 1024
+  },
+  "inference_resolution": {
+    "width": 640,
+    "height": 512
+  },
+  "model_parameters": 36911842,
+  "metrics": {
+    "final_estimated_count": 3768.79,
+    "coarse_token_count": 0.87,
+    "density_integral_raw": 3768.7864,
+    "max_pixel_density": 0.003136
+  },
+  "artifacts_generated": [
+    "density_map.npy",
+    "heatmap_sobre_rgb.jpg",
+    "heatmap_sobre_termica.jpg",
+    "zoom_roi_pedestres_densidade.jpg",
+    "painel_contagem_multimodal.jpg"
+  ]
+}
