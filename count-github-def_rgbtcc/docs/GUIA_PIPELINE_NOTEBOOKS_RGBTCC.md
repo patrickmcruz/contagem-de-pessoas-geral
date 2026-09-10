@@ -83,6 +83,17 @@ flowchart LR
 
 ---
 
+### 📙 [Notebook 03: `03_estudo_somente_corte_vs_pipeline_completo.ipynb`](file:///c:/Users/User/Git/contagem-de-pessoas-def-rgbtcc/count-github-def_rgbtcc/notebooks/03_estudo_somente_corte_vs_pipeline_completo.ipynb)
+- **Papel:** **Estudo Crítico e Probatório para Alinhamento com a Equipe**.
+- **Pergunta Respondida:** *"Somente o corte da foto RGB já não deixa as imagens 100% proporcionais e sobrepostas?"*
+- **O que ele demonstra visualmente e matematicamente:**
+  1. **Falha de Baseline (Fantasma de 22 pixels):** Mostra no zoom 400% que, ao aplicar somente corte, a silhueta visual do pedestre fica 22 pixels deslocada da sua mancha térmica (efeito visão dupla / blur), confundindo a rede neural.
+  2. **Distorção Radial da Lente 24mm:** Evidencia que as bordas da imagem óptica continuam curvadas sem retificação ($k_1=-0.08$).
+  3. **Necessidade do CLAHE:** Demonstra que a térmica bruta possui baixo alcance dinâmico, sendo o CLAHE indispensável para realçar corpos humanos.
+  4. **Tabela Quantitativa:** Compara métricas de gradiente e alinhamento entre a abordagem ingênua e o pipeline completo.
+
+---
+
 ## 3. Como Explorar Novos Métodos com Liberdade
 
 O maior ganho deste design modular é o **desacoplamento via contrato**:

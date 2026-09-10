@@ -8,8 +8,9 @@ Este diretório contém o pipeline modular e desacoplado em **dois Jupyter Noteb
 
 ```
 notebooks/
-├── 01_pre_transformacao_alinhamento.ipynb   # Estágio 1: Transformação, Calibração e Alinhamento Óptico
-├── 02_contagem_pessoas_rgbtcc.ipynb         # Estágio 2: Inferência Multimodal, Densidade e Contagem
+├── 01_pre_transformacao_alinhamento.ipynb             # Estágio 1: Transformação, Calibração e Alinhamento Óptico
+├── 02_contagem_pessoas_rgbtcc.ipynb                   # Estágio 2: Inferência Multimodal, Densidade e Contagem
+├── 03_estudo_somente_corte_vs_pipeline_completo.ipynb # Estudo Comparativo: Somente Corte vs Pipeline Completo
 │
 ├── input/                                   # ENTRADAS EXCLUSIVAMENTE BRUTAS (RAW)
 │   ├── DJI_0789_W.JPG                       # Imagem óptica RGB (Lente grande-angular 24mm)
