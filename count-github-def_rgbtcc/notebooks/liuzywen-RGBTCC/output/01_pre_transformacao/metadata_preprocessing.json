@@ -3,7 +3,7 @@
   "pipeline_stage": "01_pre_transformacao_alinhamento",
   "arquitetura_alvo": "liuzywen-RGBTCC (BMVC 2022)",
   "architecture_target": "liuzywen-RGBTCC (BMVC 2022)",
-  "timestamp": "2026-09-10 11:53:03",
+  "timestamp": "2026-09-10 13:38:45",
   "imagens_originais": {
     "rgb_raw": "DJI_0789_W.JPG",
     "thermal_raw": "DJI_0790_T.JPG",

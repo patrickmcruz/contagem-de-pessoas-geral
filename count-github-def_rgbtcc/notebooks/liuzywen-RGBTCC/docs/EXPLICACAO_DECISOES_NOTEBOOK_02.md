@@ -44,7 +44,7 @@
 - **O que foi decidido:**  
   Consumir estritamente os artefatos gerados pelo Notebook 01 em `output/01_pre_transformacao/` (`rgb_preprocessed.jpg` e `thermal_preprocessed.jpg`), acompanhados da validação de integridade dos metadados JSON.
 - **Fundamentação Técnica e Matemática:**  
-  Aplicação do princípio arquitetural de **Separação de Preocupações (Separation of Concerns - SoC)**. O Notebook 02 não recalcula desdistorção nem faz cropping; ele atua exclusivamente na execução e interpretação do modelo neural.
+  Aplicação do princípio arquitetural de **Separação de Preocupações (Separation of Concerns - SoC)**. O Notebook 02 não recalcula desdistorção nem faz cropping; ele atua exclusivamente na execução e interpretação do modelo neural. O desacoplamento por contrato de dados garante independência completa entre a camada de calibração física de sensores e a camada de inteligência artificial de contagem, permitindo comparar de forma justa os dois modelos de artigos distintos (`DEF-rgbtcc` e `liuzywen-RGBTCC`) sob as mesmas entradas retificadas.
 - **Embasamento Científico no Artigo (BMVC 2022 / arXiv:2301.03033v1):**
   - **Seção do Artigo:** Seção 3.1 (*Equation 1*).
   - **Trecho Citado:**  
@@ -61,7 +61,7 @@
 - **O que foi decidido:**  
   Implementar a rotina inteligente `detect_compute_device()` que realiza uma alocação de teste de tensor em GPU CUDA e, em caso de ausência de kernels compatíveis na compilação local do PyTorch, efetua fallback automático transparente para CPU multi-threaded (`torch.set_num_threads(8)`).
 - **Fundamentação Técnica e Matemática:**  
-  Garante resiliência operacional contínua contra a falha `RuntimeError: CUDA error: no kernel image is available for execution on the device`, comum em arquiteturas recentes da NVIDIA (ex: RTX 50 com capacidade de computação `sm_120`), permitindo executar a inferência de teste sem interrupções.
+  O seletor adaptativo valida a execução prévia de micro-kernels de convolução e alocação de tensores na GPU ativa antes de carregar o modelo completo na memória. Isso garante resiliência operacional contínua contra a falha `RuntimeError: CUDA error: no kernel image is available for execution on the device`, comum em arquiteturas recentes da NVIDIA (ex: RTX 50 com capacidade de computação `sm_120`), efetuando fallback transparente para CPU multi-threaded (`torch.set_num_threads(8)`) e permitindo executar a inferência de teste sem interrupções.
 - **Embasamento Científico no Artigo (BMVC 2022 / arXiv:2301.03033v1):**
   - **Seção do Artigo:** Seção 4.2 (*Implementation details*).
   - **Trecho Citado:**  
@@ -79,8 +79,9 @@
   Aplicar a normalização estatística oficial calculada empiricamente sobre o conjunto de treino do dataset **RGBT-CC** (2.030 pares de imagens):
   $$\text{RGB}: \mu = [0.407, 0.389, 0.396], \quad \sigma = [0.241, 0.246, 0.242]$$
   $$\text{Térmica}: \mu = [0.492, 0.168, 0.430], \quad \sigma = [0.317, 0.174, 0.191]$$
+  E redimensionar os tensores para resolução múltipla estrita de 32 ($640 \times 512$ px).
 - **Fundamentação Técnica e Matemática:**  
-  Diferente de modelos genéricos que adotam a normalização do ImageNet em ambos os canais, o autor do Liuzywen treinou o PVTv2 com tensores pré-normalizados pelas estatísticas da distribuição de reflectância e calor do RGBT-CC. Em especial, a imagem térmica possui uma distribuição assimétrica ($\mu_{green} = 0.168$ vs $\mu_{red} = 0.492$); usar a média do ImageNet ($0.456$) no canal térmico descalibraria os valores de entrada dos patches do Transformer em mais de $170\%$.
+  Diferente de modelos baseados em convoluções genéricas (como VGG) que adotam médias do ImageNet em ambos os canais, o benchmark RGBT-CC de Liu et al. calibra estatísticas específicas para a resposta radiométrica de sensores térmicos de infravermelho longo (LWIR). Isso evita a saturação do canal térmico e preserva sua distribuição fortemente assimétrica ($\mu_{green} = 0.168$ vs $\mu_{red} = 0.492$); utilizar a média do ImageNet ($0.456$) no canal térmico descalibraria os valores de entrada dos patches do Transformer em mais de $170\%$. Além disso, o redimensionamento estrito para dimensões múltiplas de 32 ($640 \times 512$ px) é exigido pela estrutura piramidal de 4 estágios do PVTv2 (fatores de escala $1/4, 1/8, 1/16, 1/32$) para evitar truncamentos na divisão de patches e nas camadas de atenção com redução espacial linear (SRA).
 - **Embasamento Científico no Artigo (BMVC 2022 / arXiv:2301.03033v1):**
   - **Seção do Artigo:** Seção 4.1 (*Datasets and evaluation metrics: RGBT-CC*) e Seção 4.2 (*Implementation details*).
   - **Trecho Citado:**  
@@ -122,7 +123,7 @@
   1. *Escala Fina ($N^2$ tokens):* $f_1 = [F_r^4, F_t^4, F_{count}] \in \mathbb{R}^{(2N^2+1) \times C}$.
   2. *Escala Média ($N$ tokens):* $f_2 = [\text{merge}_{N^2 \to N}(F_r^4), \text{merge}_{N^2 \to N}(F_t^4), F_{count}] \in \mathbb{R}^{(2N+1) \times C}$.
   3. *Escala Global ($1$ token):* $f_3 = [\text{merge}_{N^2 \to 1}(F_r^4), \text{merge}_{N^2 \to 1}(F_t^4), F_{count}] \in \mathbb{R}^{(2+1) \times C}$.  
-  As três sequências passam por autoatenção multi-cabeça paralela (MHSA), permitindo que o token $F_{count}$ aprenda uma estimativa grosseira global enquanto sincroniza os canais de cor e calor.
+  As três sequências passam por autoatenção multi-cabeça paralela (MHSA), permitindo que o token $F_{count}$ aprenda uma estimativa grosseira global enquanto sincroniza os canais de cor e calor. Além disso, o token de contagem $F_{count}$ introduz uma restrição semântica global durante a fusão multimodal, impedindo que ruídos de aquecimento ambiente (ex: asfalto exposto ao sol, lâmpadas ou reflexos térmicos do solo) provoquem ativações erráticas de falsos positivos no mapa de densidade.
 - **Embasamento Científico no Artigo (BMVC 2022 / arXiv:2301.03033v1):**
   - **Seção do Artigo:** Seção 3.1 (*Count guided multi-modal fusion - Equations 2 e 3*), Seção 4.4.1 (*Table 2*) e Seção 4.4.2 (*Table 3*).
   - **Trecho Citado:**  
@@ -177,7 +178,7 @@
 - **O que foi decidido:**  
   Computar a contagem total de pessoas por integração de superfície contínua do mapa de densidade ($\sum_{i=1}^H \sum_{j=1}^W D_{i, j}$) e contrastar o resultado com o escalar direto predito pelo token global $O_{count}$.
 - **Fundamentação Técnica e Matemática:**  
-  A regressão por mapa de densidade modela a presença humana através de distribuições Gaussianas normalizadas, nas quais a integral sobre o plano do pedestre equivale a exatamente $1.0$. O modelo Liuzywen produz **dois estimadores concorrentes**:
+  A regressão por mapa de densidade modela a presença humana através de distribuições Gaussianas normalizadas, nas quais a integral sobre o plano do pedestre equivale a exatamente $1.0$. A integração espacial contínua $\sum D(x, y)$ é matematicamente imune a problemas de oclusão severa e aglomeração densa, superando amplamente detectores tradicionais baseados em caixas delimitadoras (*bounding boxes* como YOLO), que degradam rapidamente sob altas densidades populacionais devido à sobreposição de caixas e limites do algoritmo de Supressão de Não-Máximos (NMS). O modelo Liuzywen produz **dois estimadores concorrentes**:
   1. *Estimador Espacial Denso:* $\text{Count}_{\text{density}} = \sum_{i, j} D_{i, j}$.
   2. *Estimador Coarse Global:* $\text{Count}_{\text{token}} = O_{count}$.  
   A convergência entre os dois estimadores fornece um mecanismo intrínseco de auditoria de consistência semântica.
@@ -198,7 +199,7 @@
 - **O que foi decidido:**  
   Gerar visualizações em pseudo-cores com Colormap JET sobre as modalidades ópticas e térmicas ($\alpha = 0.45$), recortar ROIs com zoom nos pedestres e persistir os resultados na pasta `output/02_contagem/` (`density_map.npy`, `telemetria_contagem.json`, `painel_contagem_multimodal.jpg`).
 - **Fundamentação Técnica e Matemática:**  
-  Atende aos preceitos de inteligência artificial explicável (XAI), fornecendo subsídio visual imediato para auditoria humana e garantindo a gravação dos tensores em float32 para posterior cálculo das métricas científicas GAME(L) e RMSE.
+  Atende aos preceitos de inteligência artificial explicável (Explainable AI - XAI), fornecendo subsídio visual imediato para auditoria humana através da sobreposição translúcida com colormap JET sobre ambas as modalidades, certificando que os picos de densidade correspondam fielmente às cabeças e silhuetas de pedestres em solo. Garante também a gravação da matriz densa `.npy` crua em ponto flutuante contínuo (`float32`) para posterior cálculo exato das métricas científicas GAME ($l \in \{0, 1, 2, 3\}$) e RMSE sem degradação ou perda de quantização por compressão com perdas (como JPEG de 8 bits). Adicionalmente, a telemetria estruturada em JSON assegura compatibilidade imediata para consumo por APIs de monitoramento.
 - **Embasamento Científico no Artigo (BMVC 2022 / arXiv:2301.03033v1):**
   - **Seção do Artigo:** Seção 4.1 (*Evaluation Metrics - Equations 12 e 13*) e Seção 4.3 (*Comparison with state-of-the-art methods - Table 1*).
   - **Trecho Citado:**  

@@ -1,18 +1,18 @@
 {
   "etapa": "02_contagem_pessoas_def_rgbtcc",
-  "timestamp": "2026-09-10 11:51:41",
+  "timestamp": "2026-09-10 14:08:18",
   "modelo": {
     "nome": "DEFRGBTCCNet",
     "artigo_referencia": "arXiv:2509.17079",
     "checkpoint": "vgg19_pretrained_calibrated",
     "dispositivo_execucao": "cuda",
-    "tempo_inferencia_segundos": 0.2222,
-    "fps_estimado": 4.5,
-    "fator_fusao_afm_w_rgb": 0.0183
+    "tempo_inferencia_segundos": 0.2187,
+    "fps_estimado": 4.57,
+    "fator_fusao_afm_w_rgb": 0.4121
   },
   "contagem_resultado": {
-    "total_continuo": 90.39,
-    "total_discreto_estimado": 90
+    "total_continuo": 88.34,
+    "total_discreto_estimado": 88
   },
   "arquivos_gerados": {
     "density_matrix_npy": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/density_map.npy",

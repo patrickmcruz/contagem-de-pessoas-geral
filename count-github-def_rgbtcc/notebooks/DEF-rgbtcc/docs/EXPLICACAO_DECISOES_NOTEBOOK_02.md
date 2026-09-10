@@ -44,7 +44,7 @@
 - **O que foi decidido:**  
   Consumir exclusivamente os arquivos gerados em `output/01_pre_transformacao/` (`rgb_preprocessed.jpg`, `thermal_preprocessed.jpg`), rejeitando qualquer reprocessamento das fotos brutas dentro deste caderno.
 - **Fundamentação Técnica e Matemática:**  
-  Aplicação do princípio arquitetural de **Separação de Preocupações (Separation of Concerns - SoC)**. Se o Notebook 02 tentasse recalcular desdistorções ou cortes, qualquer ajuste no alinhamento óptico exigiria alterar dois cadernos simultaneamente, quebrando o versionamento determinístico.
+  Aplicação do princípio arquitetural de **Separação de Preocupações (Separation of Concerns - SoC)**. O desacoplamento por contrato de dados garante independência completa entre a camada de calibração física de sensores e a camada de inteligência artificial de contagem, permitindo comparar de forma justa os dois modelos de artigos distintos (`DEF-rgbtcc` e `liuzywen-RGBTCC`) sob as mesmas entradas retificadas e isolando as rotinas ópticas de retificação da inferência neural.
 - **Relação com o Artigo Científico (arXiv 2509.17079):**
   - **Seção do Artigo:** Seção 2 (*Methodology - Fig. 2*).
   - **Trecho Citado:**  
@@ -61,7 +61,7 @@
 - **O que foi decidido:**  
   Implementar a função inteligente `detect_compute_device()` que testa ativamente a execução de tensores em GPU e realiza fallback automático para CPU caso a GPU não possua kernels compilados no PyTorch local.
 - **Fundamentação Técnica e Matemática:**  
-  Evita a interrupção fatal por `RuntimeError: CUDA error: no kernel image is available for execution on the device` em placas de arquiteturas recentes (como NVIDIA RTX 50 Blackwell `sm_120`), mantendo a robustez do pipeline de testes.
+  O seletor adaptativo valida a execução prévia de micro-kernels de teste de tensores na GPU ativa antes de instanciar o modelo na memória. Isso garante resiliência operacional contínua contra a falha `RuntimeError: CUDA error: no kernel image is available for execution on the device`, comum em arquiteturas recentes da NVIDIA (como Blackwell RTX 50 / `sm_120`), efetuando fallback transparente para CPU multi-threaded (`torch.set_num_threads(8)`).
 - **Relação com o Artigo Científico (arXiv 2509.17079):**
   - **Seção do Artigo:** Seção 3 (*Implementation Details*).
   - **Trecho Citado:**  
@@ -81,7 +81,7 @@
   2. *Spatially Modulated Attention (SMA):* Injeção de viés indutivo espacial 2D através de uma máscara de decaimento Euclidiano treinável $M_{ij} = (\beta'_{scale})^{S'_{ij}}$ para suprimir ruído de fundo.
   3. *Adaptive Fusion Modulation (AFM):* Mecanismo de gating dinâmico $w \in [0, 1]$ em nível de cena para priorizar a modalidade mais confiável em condições adversas de luz.
 - **Fundamentação Técnica e Matemática:**  
-  A SMA penaliza interações distantes irrelevantes, permitindo que cabeças de atenção especializadas capturem pedestres locais e outras capturem o contexto global da multidão. A AFM pondera $F_{fused} = w \cdot F'_r + (1-w) \cdot F'_t$, garantindo resiliência noturna.
+  A fusão profunda no nível de características (*Feature-Level Fusion*) com SMA e AFM supera early fusion (concatenação de canais na entrada, que ignora disparidades radiométricas e de campo visual) e late fusion (combinação de predições finais de modelos isolados, que perde correlações espaciais intermediárias finas entre contornos térmicos e ópticos). A SMA penaliza interações distantes irrelevantes, permitindo que cabeças de atenção especializadas capturem pedestres locais e outras capturem o contexto global da multidão. A AFM pondera $F_{fused} = w \cdot F'_r + (1-w) \cdot F'_t$, garantindo resiliência noturna ao priorizar a assinatura infravermelha ($1-w$).
 - **Relação com o Artigo Científico (arXiv 2509.17079):**
   - **Seção do Artigo:** Seção 2.1 (*Spatially Modulated Attention - Eq. 1 a 4*) e Seção 2.2 (*Adaptive Fusion Modulation - Eq. 5 e 6*).
   - **Trecho Citado:**  
@@ -99,7 +99,7 @@
 - **O que foi decidido:**  
   Normalizar as imagens com as médias e desvios padrão oficiais do ImageNet ($\mu = [0.485, 0.456, 0.406]$, $\sigma = [0.229, 0.224, 0.225]$).
 - **Fundamentação Técnica e Matemática:**  
-  Como o backbone do DEF-rgbtcc é uma VGG-19 pré-treinada na ImageNet, a normalização alinha a distribuição estatística dos canais de entrada com os pesos originais do extrator de features.
+  Como o backbone do DEF-rgbtcc é uma VGG-19 pré-treinada na ImageNet, a normalização alinha a distribuição estatística dos canais de entrada com os pesos originais do extrator de features, estabilizando as ativações dos filtros convolucionais tanto no canal RGB quanto no canal térmico (replicado em 3 canais idênticos para compatibilidade de tensores).
 - **Relação com o Artigo Científico (arXiv 2509.17079):**
   - **Seção do Artigo:** Seção 3 (*Implementation Details*).
   - **Trecho Citado:**  
@@ -134,7 +134,7 @@
   Calcular o número total de pedestres integrando numericamente a matriz bidimensional de densidade:
   $$\text{Contagem} = \iint_{\Omega} D(x, y) \, dx \, dy \approx \sum_{i=1}^{H} \sum_{j=1}^{W} D_{i, j}$$
 - **Fundamentação Técnica e Matemática:**  
-  Modelos de detecção baseados em caixas delimitadoras (bounding boxes, ex: YOLO) falham criticamente sob oclusões severas e alta densidade populacional. A regressão contínua mapeia a probabilidade espacial fracionária de presença humana: cada cabeça é representada por uma curva Gaussiana cuja integral é unitária ($\iint G(x, y) dx dy = 1.0$).
+  Modelos de detecção baseados em caixas delimitadoras (bounding boxes, ex: YOLO) falham criticamente sob oclusões severas e alta densidade populacional devido à sobreposição massiva de caixas e limites do algoritmo de Supressão de Não-Máximos (NMS). A regressão contínua mapeia a probabilidade espacial fracionária de presença humana: cada cabeça é representada por uma curva Gaussiana cuja integral sobre o plano do pedestre equivale a exatamente $1.0$ ($\iint G(x, y) dx dy = 1.0$), tornando a contagem matematicamente imune a aglomerações e sobreposições.
 - **Relação com o Artigo Científico (arXiv 2509.17079):**
   - **Seção do Artigo:** Seção 2.3 (*Loss Function - Eq. 7*) e Seção 3 (*Evaluation Metrics - Eq. 8*).
   - **Trecho Citado:**  
@@ -192,7 +192,7 @@
   3. `painel_contagem_multimodal.jpg` (dashboard completo para relatórios).
   4. `telemetria_contagem.json` (metadados estruturados com total de pessoas, peso AFM $w$, tempo de inferência e device).
 - **Fundamentação Técnica e Matemática:**  
-  Atende integralmente às diretrizes de engenharia MLOps: auditabilidade, reprodutibilidade e interoperabilidade com microserviços e dashboards de monitoramento.
+  Atende aos preceitos de engenharia MLOps: auditabilidade, reprodutibilidade e interoperabilidade. A persistência da matriz densa `.npy` crua em ponto flutuante contínuo (`float32`) preserva com precisão analítica integral os valores de densidade espacial, viabilizando o particionamento espacial para cálculo das métricas científicas GAME ($l \in \{0, 1, 2, 3\}$) e RMSE sem degradação ou perda de quantização por compressão com perdas (como JPEG de 8 bits). Os painéis visuais com colormap JET cumprem a função de auditabilidade por operadores humanos (Inteligência Artificial Explicável - XAI), enquanto a telemetria JSON expõe métricas estruturadas padronizadas para consumo direto por APIs de monitoramento e microsserviços.
 - **Relação com o Artigo Científico (arXiv 2509.17079):**
   - **Seção do Artigo:** Seção 3 (*Evaluation Metrics: GAME e RMSE - Eq. 8*).
   - **Trecho Citado:**  

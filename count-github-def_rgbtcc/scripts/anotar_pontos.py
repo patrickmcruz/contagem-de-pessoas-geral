@@ -6,11 +6,13 @@ Permite marcar interativamente a posição das cabeças/pedestres em imagens
 RGB pré-processadas do pipeline RGBTCC, gerando os artefatos de Ground Truth
 necessários para cálculo de métricas (MAE, MSE) e apresentações.
 
-Atalhos:
-- Botão Esquerdo: Marcar ponto (cabeça)
-- Botão Direito ou 'Z' / 'U': Desfazer último ponto
-- 'C': Limpar todas as anotações
-- 'S' ou 'Q' ou ESC: Salvar anotações e sair
+Atalhos & Controles:
+- Botão Esquerdo (na imagem): Marcar ponto (cabeça)
+- Botão Esquerdo (no topo): Clicar no botão interativo "[ ↩ Desfazer ]" ou "[ 💾 Salvar ]"
+- Botão Direito (em qualquer lugar): Desfazer último ponto
+- Teclas Ctrl+Z, Z, U, Backspace ou Seta Esquerda: Desfazer último ponto
+- Tecla C: Limpar todas as anotações
+- Teclas S, Q ou ESC: Salvar anotações e sair
 """
 
 import argparse
@@ -28,23 +30,28 @@ DEFAULT_OUTPUT_DIR = Path("notebooks/DEF-rgbtcc/output/ground_truth")
 coordenadas = []
 img_base = None
 img_display = None
-mouse_pos = (0, 0)
 raio_ponto = 4
+deve_encerrar = False
+
+# Coordenadas dos botões no HUD superior
+HUD_HEIGHT = 48
+BTN_UNDO = (0, 0, 0, 0)
+BTN_SAVE = (0, 0, 0, 0)
 
 
 def atualizar_canvas():
-    """Redesenha todos os pontos sobre a cópia da imagem base e projeta o HUD."""
-    global img_display
+    """Redesenha todos os pontos sobre a imagem base e projeta o HUD interativo."""
+    global img_display, BTN_UNDO, BTN_SAVE
     img_display = img_base.copy()
     h, w = img_base.shape[:2]
 
-    # 1. Desenha os pontos anotados (círculo com borda para contraste em qualquer iluminação)
+    # 1. Desenha os pontos anotados (círculo com borda para contraste)
     for i, pt in enumerate(coordenadas):
         px, py = pt["x"], pt["y"]
-        cv2.circle(img_display, (px, py), raio_ponto, (0, 0, 255), -1)      # Centro Vermelho
+        cv2.circle(img_display, (px, py), raio_ponto, (0, 0, 255), -1)       # Vermelho
         cv2.circle(img_display, (px, py), raio_ponto + 2, (0, 255, 255), 1)  # Borda Amarela
         
-        # Opcional: desenha o número se houver poucos pontos (< 100)
+        # Numeração dos primeiros pontos para auditoria
         if len(coordenadas) <= 60:
             cv2.putText(
                 img_display,
@@ -57,75 +64,116 @@ def atualizar_canvas():
                 cv2.LINE_AA,
             )
 
-    # 2. Barra de HUD superior (faixa escura semi-transparente)
-    hud_h = 42
+    # 2. Faixa do HUD superior
     overlay = img_display.copy()
-    cv2.rectangle(overlay, (0, 0), (w, hud_h), (15, 23, 42), -1)
-    cv2.addWeighted(overlay, 0.85, img_display, 0.15, 0, img_display)
-    cv2.line(img_display, (0, hud_h), (w, hud_h), (56, 189, 248), 2)
+    cv2.rectangle(overlay, (0, 0), (w, HUD_HEIGHT), (15, 23, 42), -1)
+    cv2.addWeighted(overlay, 0.90, img_display, 0.10, 0, img_display)
+    cv2.line(img_display, (0, HUD_HEIGHT), (w, HUD_HEIGHT), (56, 189, 248), 2)
 
-    # Textos do HUD
-    texto_total = f"Pessoas Marcadas: {len(coordenadas)}"
-    texto_coords = f"Cursor: ({mouse_pos[0]}, {mouse_pos[1]})"
-    texto_ajuda = "[Esq]: Marcar | [Dir / Z]: Desfazer | [C]: Limpar | [S/Q/ESC]: Salvar e Sair"
-
+    # 3. Informações à esquerda: Contador de pessoas
     cv2.putText(
         img_display,
-        texto_total,
-        (15, 27),
+        f"Pessoas: {len(coordenadas)}",
+        (16, 32),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.65,
-        (74, 222, 128),  # Verde claro
+        0.8,
+        (74, 222, 128),  # Verde
         2,
         cv2.LINE_AA,
     )
+
+    # 4. Instruções no centro
     cv2.putText(
         img_display,
-        texto_coords,
-        (280, 26),
+        "Botao Esq: Marcar | Botao Dir / Ctrl+Z / <- : Desfazer",
+        (220, 30),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
+        0.52,
         (203, 213, 225),  # Cinza claro
         1,
         cv2.LINE_AA,
     )
+
+    # 5. Botões clicáveis à direita
+    # Botão Desfazer (Laranja/Âmbar)
+    u_x1, u_y1, u_x2, u_y2 = w - 360, 8, w - 190, 40
+    BTN_UNDO = (u_x1, u_y1, u_x2, u_y2)
+    cv2.rectangle(img_display, (u_x1, u_y1), (u_x2, u_y2), (30, 110, 230), -1)
+    cv2.rectangle(img_display, (u_x1, u_y1), (u_x2, u_y2), (255, 255, 255), 1)
     cv2.putText(
         img_display,
-        texto_ajuda,
-        (w - 680, 26),
+        "<- Desfazer",
+        (u_x1 + 18, u_y1 + 22),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.48,
-        (147, 197, 253),  # Azul claro
-        1,
+        0.55,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+
+    # Botão Salvar (Verde esmeralda)
+    s_x1, s_y1, s_x2, s_y2 = w - 175, 8, w - 15, 40
+    BTN_SAVE = (s_x1, s_y1, s_x2, s_y2)
+    cv2.rectangle(img_display, (s_x1, s_y1), (s_x2, s_y2), (40, 150, 60), -1)
+    cv2.rectangle(img_display, (s_x1, s_y1), (s_x2, s_y2), (255, 255, 255), 1)
+    cv2.putText(
+        img_display,
+        "Salvar & Sair",
+        (s_x1 + 16, s_y1 + 22),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (255, 255, 255),
+        2,
         cv2.LINE_AA,
     )
 
     cv2.imshow("Anotacao de Ground Truth (RGBTCC)", img_display)
 
 
-def callback_mouse(event, x, y, flags, param):
-    """Manipula eventos do cursor e cliques do mouse."""
-    global coordenadas, mouse_pos
-    mouse_pos = (x, y)
-
-    # Movimento do mouse: atualiza posição no HUD
-    if event == cv2.EVENT_MOUSEMOVE:
+def desfazer_ultimo_ponto():
+    """Remove o último ponto adicionado e atualiza a interface."""
+    global coordenadas
+    if coordenadas:
+        removido = coordenadas.pop()
+        print(f"[-] Ponto #{removido['id']} desfeito em: (x={removido['x']}, y={removido['y']}) | Restantes: {len(coordenadas)}")
         atualizar_canvas()
+    else:
+        print("[!] Nenhum ponto registrado para desfazer.")
 
-    # Botão esquerdo: adiciona um novo ponto
-    elif event == cv2.EVENT_LBUTTONDOWN:
+
+def callback_mouse(event, x, y, flags, param):
+    """Manipula cliques do mouse e botões na tela."""
+    global coordenadas, deve_encerrar
+
+    # Botão esquerdo
+    if event == cv2.EVENT_LBUTTONDOWN:
+        # Verifica se clicou na área do HUD (botões da interface)
+        if y <= HUD_HEIGHT:
+            u_x1, u_y1, u_x2, u_y2 = BTN_UNDO
+            s_x1, s_y1, s_x2, s_y2 = BTN_SAVE
+
+            # Clicou no botão [ Desfazer ]
+            if u_x1 <= x <= u_x2 and u_y1 <= y <= u_y2:
+                desfazer_ultimo_ponto()
+                return
+
+            # Clicou no botão [ Salvar & Sair ]
+            elif s_x1 <= x <= s_x2 and s_y1 <= y <= s_y2:
+                print("[*] Botão 'Salvar & Sair' acionado pelo mouse.")
+                deve_encerrar = True
+                return
+            return
+
+        # Clique dentro da imagem: adiciona um novo ponto
         if 0 <= y < img_base.shape[0] and 0 <= x < img_base.shape[1]:
             novo_id = len(coordenadas) + 1
             coordenadas.append({"id": novo_id, "x": int(x), "y": int(y)})
             print(f"[+] Ponto #{novo_id} anotado em: (x={x}, y={y}) | Total: {len(coordenadas)}")
             atualizar_canvas()
 
-    # Botão direito: desfaz o último ponto inserido
+    # Botão direito: desfaz em qualquer lugar da tela
     elif event == cv2.EVENT_RBUTTONDOWN:
-        if coordenadas:
-            removido = coordenadas.pop()
-            print(f"[-] Ponto #{removido['id']} desfeito em: (x={removido['x']}, y={removido['y']}) | Restantes: {len(coordenadas)}")
-            atualizar_canvas()
+        desfazer_ultimo_ponto()
 
 
 def carregar_anotacoes_existentes(caminho_csv: Path):
@@ -145,7 +193,7 @@ def carregar_anotacoes_existentes(caminho_csv: Path):
 
 
 def main():
-    global img_base, raio_ponto
+    global img_base, raio_ponto, deve_encerrar
     parser = argparse.ArgumentParser(
         description="Anotador Interativo de Pontos de Multidão (Ground Truth)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -204,7 +252,9 @@ def main():
         carregar_anotacoes_existentes(args.carregar)
 
     window_name = "Anotacao de Ground Truth (RGBTCC)"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+    # WINDOW_NORMAL com flag GUI_NORMAL remove menus irrelevantes do Qt mantendo janela responsiva
+    flags_win = cv2.WINDOW_NORMAL | getattr(cv2, "WINDOW_GUI_NORMAL", 16)
+    cv2.namedWindow(window_name, flags_win)
     cv2.resizeWindow(window_name, 1280, 800)
     cv2.setMouseCallback(window_name, callback_mouse)
 
@@ -213,28 +263,35 @@ def main():
     print("\n" + "=" * 70)
     print("       ANOTADOR INTERATIVO INICIADO COM SUCESSO")
     print("=" * 70)
-    print("  • BOTÃO ESQUERDO:    Marcar ponto (cabeça)")
-    print("  • BOTÃO DIREITO / Z: Desfazer o último ponto")
+    print("  • BOTÃO ESQUERDO:    Marcar ponto (ou clicar em [<- Desfazer] no HUD)")
+    print("  • BOTÃO DIREITO:     Desfazer último ponto em qualquer lugar")
+    print("  • TECLADO DESFAZER:  Ctrl+Z, Z, U, Backspace ou Seta Esquerda (<-)")
     print("  • TECLA 'C':         Limpar tudo")
-    print("  • TECLA 'S' / 'Q':   Salvar e sair")
+    print("  • TECLA 'S' / 'Q':   Salvar e sair (ou clicar em [Salvar & Sair] no HUD)")
     print("=" * 70 + "\n")
 
-    # Loop principal de eventos de teclado
-    while True:
-        key = cv2.waitKey(20) & 0xFF
+    # Loop principal de eventos de teclado com waitKeyEx para capturar teclas especiais
+    while not deve_encerrar:
+        raw_key = cv2.waitKeyEx(30)
+        if raw_key == -1:
+            continue
 
-        # Sair e Salvar (ESC, 'q', 's')
-        if key in [27, ord("q"), ord("s"), ord("Q"), ord("S")]:
+        key = raw_key & 0xFF
+
+        # Sair e Salvar:
+        # ESC (27), 's'/'S' (115/83), 'q'/'Q' (113/81 se não for seta)
+        if raw_key in [27, ord("s"), ord("S")] or (key in [ord("q"), ord("Q")] and raw_key not in [65361, 81]):
             break
 
-        # Desfazer ('z' ou 'u')
-        elif key in [ord("z"), ord("u"), ord("Z"), ord("U")]:
-            if coordenadas:
-                removido = coordenadas.pop()
-                print(f"[-] Ponto #{removido['id']} desfeito em: (x={removido['x']}, y={removido['y']}) | Restantes: {len(coordenadas)}")
-                atualizar_canvas()
+        # Desfazer (Undo):
+        # 1. Ctrl+Z (ASCII 26)
+        # 2. 'z' (122), 'Z' (90), 'u' (117), 'U' (85)
+        # 3. Backspace (8) ou Delete (127, 255, 65535)
+        # 4. Seta Esquerda (Linux X11/Qt: 65361 ou 81 ou 2424832)
+        elif raw_key in [26, 65361, 8, 127, 65535, 2424832] or key in [26, ord("z"), ord("Z"), ord("u"), ord("U"), 8, 127]:
+            desfazer_ultimo_ponto()
 
-        # Limpar ('c')
+        # Limpar ('c' / 'C')
         elif key in [ord("c"), ord("C")]:
             if coordenadas:
                 print("[!] Limpando todas as marcações.")
