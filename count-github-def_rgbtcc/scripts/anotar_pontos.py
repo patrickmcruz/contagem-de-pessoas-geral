@@ -30,7 +30,7 @@ DEFAULT_OUTPUT_DIR = Path("notebooks/DEF-rgbtcc/output/ground_truth")
 coordenadas = []
 img_base = None
 img_display = None
-raio_ponto = 4
+raio_ponto = 2
 deve_encerrar = False
 
 # Coordenadas dos botões no HUD superior
@@ -48,21 +48,8 @@ def atualizar_canvas():
     # 1. Desenha os pontos anotados (círculo com borda para contraste)
     for i, pt in enumerate(coordenadas):
         px, py = pt["x"], pt["y"]
-        cv2.circle(img_display, (px, py), raio_ponto, (0, 0, 255), -1)       # Vermelho
-        cv2.circle(img_display, (px, py), raio_ponto + 2, (0, 255, 255), 1)  # Borda Amarela
-        
-        # Numeração dos primeiros pontos para auditoria
-        if len(coordenadas) <= 60:
-            cv2.putText(
-                img_display,
-                str(i + 1),
-                (px + 6, py - 4),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.35,
-                (0, 255, 255),
-                1,
-                cv2.LINE_AA,
-            )
+        cv2.circle(img_display, (px, py), raio_ponto, (0, 0, 255), -1)       # Vermelho central
+        cv2.circle(img_display, (px, py), raio_ponto + 1, (0, 255, 255), 1)  # Borda amarela sutil
 
     # 2. Faixa do HUD superior
     overlay = img_display.copy()
@@ -219,7 +206,7 @@ def main():
     parser.add_argument(
         "--raio",
         type=int,
-        default=4,
+        default=2,
         help="Raio em pixels do marcador do ponto",
     )
     args = parser.parse_args()
