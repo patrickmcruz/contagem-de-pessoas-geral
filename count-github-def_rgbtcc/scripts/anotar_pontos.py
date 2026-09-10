@@ -42,7 +42,7 @@ coordenadas = []
 img_base = None             # Imagem original 8000x6000 em memória
 canvas_base = None          # Canvas de fundo com imagem redimensionada ('fit')
 img_display = None          # Frame final renderizado para cv2.imshow
-raio_marcador_display = 2   # Raio na tela do monitor
+raio_marcador_display = 1   # Raio padrão ultra-preciso na tela (1px)
 is_fullscreen = True
 
 # Variáveis de projeção geométrica ('fit')
@@ -56,7 +56,7 @@ screen_h = 1080
 HUD_HEIGHT = 52
 
 deve_encerrar = False
-status_mensagem = "Botao Esq: Marcar | Botao Dir / Ctrl+Z: Desfazer | F11: Tela Cheia"
+status_mensagem = "Botao Esq: Marcar | Botao Dir: Desfazer | [+/-]: Tamanho do Ponto | F11: Tela Cheia"
 status_cor = (203, 213, 225)
 
 # Diretório e imagem ativos
@@ -177,8 +177,12 @@ def atualizar_canvas():
         disp_x = int(round(pt["x"] * scale_fit)) + offset_x
         disp_y = int(round(pt["y"] * scale_fit)) + offset_y
 
-        cv2.circle(img_display, (disp_x, disp_y), raio_marcador_display, (0, 0, 255), -1)      # Vermelho
-        cv2.circle(img_display, (disp_x, disp_y), raio_marcador_display + 1, (0, 255, 255), 1) # Borda Amarela
+        if raio_marcador_display <= 1:
+            # Ponto ultra sutil e preciso: ponto central vermelho puro
+            cv2.circle(img_display, (disp_x, disp_y), 1, (0, 0, 255), -1)
+        else:
+            cv2.circle(img_display, (disp_x, disp_y), raio_marcador_display, (0, 0, 255), -1)      # Vermelho
+            cv2.circle(img_display, (disp_x, disp_y), raio_marcador_display + 1, (0, 255, 255), 1) # Borda Amarela
 
     # 2. Barra de HUD superior
     cv2.rectangle(img_display, (0, 0), (w, HUD_HEIGHT), (15, 23, 42), -1)
@@ -398,7 +402,7 @@ def main():
     parser.add_argument(
         "--raio",
         type=int,
-        default=2,
+        default=1,
         help="Raio em pixels do marcador desenhado na tela",
     )
     parser.add_argument(
@@ -533,7 +537,19 @@ def main():
                 cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
                 cv2.resizeWindow(window_name, screen_w - 100, screen_h - 100)
 
-        # 5. Limpar marcações ('c' / 'C')
+        # 5. Ajustar tamanho do marcador em tempo real (+ / -)
+        elif raw_key in [ord("+"), ord("="), 43, 61]:
+            raio_marcador_display = min(8, raio_marcador_display + 1)
+            status_mensagem = f"Tamanho do ponto: {raio_marcador_display}px"
+            status_cor = (147, 197, 253)
+            atualizar_canvas()
+        elif raw_key in [ord("-"), ord("_"), 45, 95]:
+            raio_marcador_display = max(1, raio_marcador_display - 1)
+            status_mensagem = f"Tamanho do ponto: {raio_marcador_display}px"
+            status_cor = (147, 197, 253)
+            atualizar_canvas()
+
+        # 6. Limpar marcações ('c' / 'C')
         elif key in [ord("c"), ord("C")]:
             if coordenadas:
                 print("[!] Limpando todas as marcações.")
