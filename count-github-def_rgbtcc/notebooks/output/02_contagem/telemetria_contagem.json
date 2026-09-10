@@ -1,0 +1,24 @@
+{
+  "projeto": "contagem-de-pessoas-def-rgbtcc",
+  "etapa": "02_contagem_pessoas_rgbtcc",
+  "modelo_utilizado": "ThermalRGBNet (ArXiv / BMVC 2022)",
+  "dispositivo_hardware": "cpu",
+  "insumo_entrada": {
+    "rgb_preprocessed": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\01_pre_transformacao\\rgb_preprocessed.jpg",
+    "thermal_preprocessed": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\01_pre_transformacao\\thermal_preprocessed.jpg"
+  },
+  "resultados": {
+    "contagem_pessoas_estimada": 565,
+    "soma_integral_densidade": 565.27,
+    "tempo_inferencia_ms": 1914.1,
+    "densidade_minima": 0.0,
+    "densidade_maxima": 1.37025
+  },
+  "artefatos_gerados": {
+    "painel_2x2": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\02_contagem\\painel_contagem_multimodal.jpg",
+    "zoom_roi": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\02_contagem\\zoom_roi_pedestres_densidade.jpg",
+    "heatmap_rgb": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\02_contagem\\heatmap_sobre_rgb.jpg",
+    "heatmap_termica": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\02_contagem\\heatmap_sobre_termica.jpg",
+    "mapa_densidade_npy": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\02_contagem\\density_map.npy"
+  }
+}
