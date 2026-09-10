@@ -71,19 +71,27 @@ Para evitar problemas de falta de desfazer (*Undo*) ou anotações perdidas, cri
 notebooks/.venv/bin/python scripts/anotar_pontos.py
 ```
 
-### Principais recursos:
-- **Botão Esquerdo:** Adiciona ponto (cabeça do pedestre).
+### Principais recursos de Navegação em Alta Resolução (8000x6000 px):
+- **Roda do Mouse (Scroll):** Dá **Zoom In** ou **Zoom Out** instantâneo exatamente onde o cursor do mouse estiver apontando, revelando cada pessoa com nitidez nativa 1:1.
+- **Botão do Meio (Scroll Click) e Arrastar:** Move (*Pan*) suavemente pela imagem.
+- **Segurar Tecla ESPAÇO + Botão Esquerdo:** Move (*Pan*) pela cena (estilo Photoshop / Figma).
+- **Teclas W, A, S, D ou Setas:** Navega a visualização para cima, esquerda, baixo e direita.
+- **Tecla `R` ou Botão `[ ⟲ Fit ]`:** Reseta o zoom para o enquadramento completo da imagem na tela.
+- **Teclas `I` e `O` ou Botões `[ + ]` e `[ - ]`:** Zoom In e Zoom Out pelo teclado ou HUD.
+- **Mini-Mapa PiP (Picture-in-Picture):** No canto inferior direito, mostra a visão geral e um retângulo indicando qual região da imagem 8000x você está inspecionando no momento.
+
+### Controles de Anotação:
+- **Botão Esquerdo:** Adiciona ponto (cabeça do pedestre) na resolução original 8000x6000 com precisão máxima.
 - **Botão `[ <- Desfazer ]` (ou Ctrl+Z / Seta <- / Botão Direito):** Desfaz o último ponto anotado (*Undo*).
 - **Botão `[ 💾 Salvar (Ctrl+S) ]` (ou Ctrl+S / S):** Salva o progresso atual em disco (**Checkpoint**) sem fechar a janela.
 - **Botão `[ ✓ Finalizar ]` (ou F / ESC):** Encerra de fato a contagem e gera os relatórios finais.
+- **Teclas `+` e `-`:** Ajustam o tamanho do marcador na tela em tempo real.
 - **Continuação Automática:** Ao abrir a mesma imagem, ele detecta automaticamente anotações anteriores e continua de onde você parou!
-- **Tecla `C`:** Limpa todas as anotações.
-- **HUD Integrado:** Placar em tempo real com número de pessoas, feedback do último checkpoint e atalhos.
 - **Artefatos Gerados (em `notebooks/DEF-rgbtcc/output/ground_truth/`):**
-  1. `pontos_ground_truth.csv`: Coordenadas `(id, x, y)`.
-  2. `checkpoint_anotacao.json`: Estado do progresso e metadados.
-  3. `pontos_ground_truth.json`: Metadados completos com dimensões e contagem total.
-  4. `rgb_anotada_ground_truth.jpg`: Imagem com os pontos desenhados para apresentação e auditoria.
+  1. `pontos_ground_truth_DJI_0789_W.csv`: Coordenadas `(id, x, y)` reais no sensor 8000x6000.
+  2. `checkpoint_DJI_0789_W.json`: Estado do progresso e metadados.
+  3. `pontos_ground_truth_DJI_0789_W.json`: Metadados completos com dimensões e contagem total.
+  4. `rgb_anotada_ground_truth_DJI_0789_W.jpg`: Imagem original 8000x6000 com todos os pontos desenhados.
 
 ---
 
