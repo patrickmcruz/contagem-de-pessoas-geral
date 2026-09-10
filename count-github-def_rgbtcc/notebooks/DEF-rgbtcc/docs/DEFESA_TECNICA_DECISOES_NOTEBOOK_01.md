@@ -1,13 +1,11 @@
 # Dossiê de Defesa Técnica: Decisões de Engenharia Óptica e Alinhamento Multimodal
-**Notebook:** [`notebooks/01_pre_transformacao_alinhamento.ipynb`](file:///c:/Users/User/Git/contagem-de-pessoas-def-rgbtcc/count-github-def_rgbtcc/notebooks/01_pre_transformacao_alinhamento.ipynb)  
+**Notebook:** [`notebooks/01_pre_transformacao_alinhamento.ipynb`](count-github-def_rgbtcc/notebooks/01_pre_transformacao_alinhamento.ipynb)  
 **Público-Alvo:** Engenheiros de Visão Computacional, Pares Técnicos e Liderança de Projeto  
 **Objetivo:** Fornecer a argumentação rigorosa, física, matemática e arquitetural para defender perante o time as decisões tomadas em cada célula do primeiro estágio do pipeline RGBT.
 
 ---
 
 ## Índice das Decisões
-1. [Decisão 01: Setup do Ambiente e Interoperabilidade com o App](#decisao-01-setup-do-ambiente-e-interoperabilidade-com-o-app)
-2. [Decisão 02: Ingestão RAW e Gestão de Espaços de Cor](#decisao-02-ingestao-raw-e-gestao-de-espacos-de-cor)
 3. [Decisão 03: Desdistorção de Lente Grande-Angular no Sensor RAW Completo](#decisao-03-desdistorcao-de-lente-grande-angular-no-sensor-raw-completo)
 4. [Decisão 04: Casamento de Campo de Visão (FOV Center Crop Ancorado na Altura)](#decisao-04-casamento-de-campo-de-visao-fov-center-crop-ancorado-na-altura)
 5. [Decisão 05: Equalização Radiométrica da Térmica (CLAHE no Espaço Lab)](#decisao-05-equalizacao-radiometrica-da-termica-clahe-no-espaco-lab)
@@ -16,22 +14,7 @@
 8. [Decisão 08: Auditoria Visual Sub-Pixel na Mulher Central e Plano do Solo](#decisao-08-auditoria-visual-sub-pixel-na-mulher-central-e-plano-do-solo)
 9. [Decisão 09: Exportação do Contrato de Insumos Padronizado](#decisao-09-exportacao-do-contrato-de-insumos-padronizado)
 
----
 
-<a id="decisao-01-setup-do-ambiente-e-interoperabilidade-com-o-app"></a>
-### Decisão 01: Setup do Ambiente e Interoperabilidade com o App
-
-- **O que foi decidido:**  
-  Adicionar a pasta `app/` ao `sys.path` dinamicamente, isolar o diretório de cache do Matplotlib via `MPLCONFIGDIR = '/tmp/matplotlib'` e manipular diretórios utilizando `pathlib.Path` resolvido de forma absoluta.
-- **Fundamentação Técnica e Matemática:**  
-  1. *Single Source of Truth:* A lógica de calibração reside no pacote de produção [`RGBTImageEqualizer`](file:///c:/Users/User/Git/contagem-de-pessoas-def-rgbtcc/count-github-def_rgbtcc/app/head_counting/preprocessing.py). O notebook precisa consumir exatamente a mesma classe para evitar "duplicação de código com divergência futura".  
-  2. *Resiliência de Sistema:* Em servidores Linux multi-usuário ou instâncias Docker sem permissão no `$HOME`, o Matplotlib trava ao tentar gravar cache em `~/.cache`. A variável `/tmp/matplotlib` garante execução silenciosa e sem travamentos.  
-  3. *Portabilidade de SO:* O uso de `Path.resolve()` trata transparentemente barras normais (`/`) e invertidas (`\`) entre Windows e Linux.
-- **Alternativas Descartadas:**  
-  - *Copiar e colar o código de `app/` dentro do notebook:* Descartado para não violar o princípio DRY (*Don't Repeat Yourself*).  
-  - *Hardcode de caminhos absolutos:* Descartado porque quebraria o código no computador de outros membros da equipe.
-- **Argumento para o Time:**  
-  *"Garantimos que o notebook seja portátil para qualquer máquina e utilize a mesma base de código do sistema em produção, sem criar duas versões da mesma matemática."*
 
 ---
 
