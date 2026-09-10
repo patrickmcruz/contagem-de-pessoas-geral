@@ -36,7 +36,11 @@ Este walkthrough detalha a implementação completa, execução ponta a ponta e 
    - Detecção inteligente de hardware (CUDA / CPU multi-threading).
    - Inferência ponta a ponta com `LiuzywenRGBTCCNet`.
    - Geração de heatmaps sobrepostos translúcidos, ROI com zoom em pedestres e métricas estruturadas.
-3. **[`README.md`](file:///c:/Users/User/Git/contagem-de-pessoas-def-rgbtcc/count-github-def_rgbtcc/notebooks/liuzywen-RGBTCC/README.md):**
+3. **[`EXPLICACAO_DECISOES_NOTEBOOK_01.md`](EXPLICACAO_DECISOES_NOTEBOOK_01.md):**
+   - Dossiê técnico completo de pré-processamento com 7 decisões renumeradas (desdistorção RAW, casamento de FOV 5:4, CLAHE no espaço Lab, alinhamento afim sub-pixel, paridade bit-a-bit e contrato de dados) com citações literais do artigo BMVC 2022.
+4. **[`EXPLICACAO_DECISOES_NOTEBOOK_02.md`](EXPLICACAO_DECISOES_NOTEBOOK_02.md):**
+   - Dossiê técnico completo de inferência e arquitetura neural com 10 decisões cobrindo PVTv2, MSTTrans (token $F_{count}$), MSDTrans (atenção deformável), normalização RGBT-CC, Softplus e métricas GAME.
+5. **[`README.md`](../README.md):**
    - Guia completo de uso, tabelas comparativas do benchmark RGBT-CC e referências científicas.
 
 ---

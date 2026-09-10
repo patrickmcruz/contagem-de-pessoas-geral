@@ -17,7 +17,7 @@
     }
   },
   "artefatos_salvos": [
-    "c:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\03_estudo_corte_vs_pipeline\\comparativo_somente_corte_zoom_mulher.jpg",
-    "c:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\03_estudo_corte_vs_pipeline\\comparativo_somente_corte_zoom_pedestre.jpg"
+    "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/03_estudo_corte_vs_pipeline/comparativo_somente_corte_zoom_mulher.jpg",
+    "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/03_estudo_corte_vs_pipeline/comparativo_somente_corte_zoom_pedestre.jpg"
   ]
 }

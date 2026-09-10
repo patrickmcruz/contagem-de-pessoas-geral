@@ -1,6 +1,6 @@
 {
   "etapa": "01_pre_transformacao_alinhamento",
-  "timestamp": "2026-09-10 01:03:34",
+  "timestamp": "2026-09-10 09:51:22",
   "imagens_originais": {
     "rgb_raw": "DJI_0789_W.JPG",
     "thermal_raw": "DJI_0790_T.JPG",
@@ -32,9 +32,9 @@
       1024
     ],
     "divisivel_por_32": true,
-    "rgb_preprocessed": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\01_pre_transformacao\\rgb_preprocessed.jpg",
-    "thermal_preprocessed": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\01_pre_transformacao\\thermal_preprocessed.jpg",
-    "blend_alta_precisao": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\01_pre_transformacao\\blend_alta_precisao.jpg",
-    "painel_alinhamento": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\01_pre_transformacao\\painel_alinhamento_multimodal.jpg"
+    "rgb_preprocessed": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/01_pre_transformacao/rgb_preprocessed.jpg",
+    "thermal_preprocessed": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/01_pre_transformacao/thermal_preprocessed.jpg",
+    "blend_alta_precisao": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/01_pre_transformacao/blend_alta_precisao.jpg",
+    "painel_alinhamento": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/01_pre_transformacao/painel_alinhamento_multimodal.jpg"
   }
 }

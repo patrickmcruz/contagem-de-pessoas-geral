@@ -53,8 +53,8 @@ Este walkthrough documenta a implementação, execução ponta a ponta e valida�
 ### B. Verificação de Links e Dossiês Técnicos
 
 O script de auditoria de links validou que **100% das chamadas** nos cabeçalhos das células apontam com precisão para os tópicos do dossiê:
-- `01_pre_transformacao_alinhamento.ipynb` $\to$ [`docs/DEFESA_TECNICA_DECISOES_NOTEBOOK_01.md`](file:///c:/Users/User/Git/contagem-de-pessoas-def-rgbtcc/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/docs/DEFESA_TECNICA_DECISOES_NOTEBOOK_01.md) (8/8 âncoras ativas).
-- `02_contagem_pessoas_rgbtcc.ipynb` $\to$ [`docs/DEFESA_TECNICA_DECISOES_NOTEBOOK_02.md`](file:///c:/Users/User/Git/contagem-de-pessoas-def-rgbtcc/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/docs/DEFESA_TECNICA_DECISOES_NOTEBOOK_02.md) (10/10 âncoras ativas).
+- `01_pre_transformacao_alinhamento.ipynb` $\to$ [`docs/EXPLICACAO_DECISOES_NOTEBOOK_01.md`](EXPLICACAO_DECISOES_NOTEBOOK_01.md) (7/7 âncoras ativas).
+- `02_contagem_pessoas_rgbtcc.ipynb` $\to$ [`docs/EXPLICACAO_DECISOES_NOTEBOOK_02.md`](EXPLICACAO_DECISOES_NOTEBOOK_02.md) (10/10 âncoras ativas).
 - **Total de divergências:** `0`.
 
 ---

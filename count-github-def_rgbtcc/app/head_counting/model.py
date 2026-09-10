@@ -26,7 +26,7 @@ try:
     from def_rgbtcc.serve import RGBTCCInference  # type: ignore[import-untyped]
 except ImportError:
     RGBTCCInference = None
-    logger.warning("def_rgbtcc module not installed. Running with fallback model handler.")
+    logger.debug("def_rgbtcc module not installed. Running with fallback model handler.")
 
 # Placeholders for legacy Ultralytics YOLO compatibility
 YOLO: Any = None

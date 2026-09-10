@@ -1,24 +1,24 @@
 {
   "etapa": "02_contagem_pessoas_def_rgbtcc",
-  "timestamp": "2026-09-10 01:03:53",
+  "timestamp": "2026-09-10 09:23:07",
   "modelo": {
     "nome": "DEFRGBTCCNet",
     "artigo_referencia": "arXiv:2509.17079",
     "checkpoint": "vgg19_pretrained_calibrated",
-    "dispositivo_execucao": "cpu",
-    "tempo_inferencia_segundos": 7.0725,
-    "fps_estimado": 0.14,
-    "fator_fusao_afm_w_rgb": 0.429
+    "dispositivo_execucao": "cuda",
+    "tempo_inferencia_segundos": 0.2309,
+    "fps_estimado": 4.33,
+    "fator_fusao_afm_w_rgb": 0.2004
   },
   "contagem_resultado": {
-    "total_continuo": 92.26,
-    "total_discreto_estimado": 92
+    "total_continuo": 82.39,
+    "total_discreto_estimado": 82
   },
   "arquivos_gerados": {
-    "density_matrix_npy": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\02_contagem\\density_map.npy",
-    "painel_executivo": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\02_contagem\\painel_contagem_multimodal.jpg",
-    "heatmap_sobre_rgb": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\02_contagem\\heatmap_sobre_rgb.jpg",
-    "heatmap_sobre_termica": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\02_contagem\\heatmap_sobre_termica.jpg",
-    "zoom_roi_pedestres": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\DEF-rgbtcc\\output\\02_contagem\\zoom_roi_pedestres_densidade.jpg"
+    "density_matrix_npy": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/density_map.npy",
+    "painel_executivo": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/painel_contagem_multimodal.jpg",
+    "heatmap_sobre_rgb": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/heatmap_sobre_rgb.jpg",
+    "heatmap_sobre_termica": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/heatmap_sobre_termica.jpg",
+    "zoom_roi_pedestres": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/zoom_roi_pedestres_densidade.jpg"
   }
 }
