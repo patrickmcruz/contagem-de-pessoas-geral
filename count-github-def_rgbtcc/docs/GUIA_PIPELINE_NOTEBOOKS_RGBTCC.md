@@ -17,9 +17,9 @@ Por essa razão, o pipeline foi arquitetado em um **par desacoplado de Jupyter N
 ```mermaid
 flowchart LR
     subgraph STAGE_1 ["Notebook 01: Pré-Transformação"]
-        RAW["Imagens RAW\n(DJI_0789_W.JPG +\nDJI_0790_T.JPG)"] --> FOV["1. FOV Crop 70%"]
-        FOV --> UNDIST["2. Undistort Lente 24mm"]
-        UNDIST --> CLAHE["3. CLAHE Térmico (Lab)"]
+        RAW["Imagens RAW\n(DJI_0789_W.JPG +\nDJI_0790_T.JPG)"] --> UNDIST["1. Undistort Lente 24mm (Sensor RAW)"]
+        UNDIST --> FOV["2. FOV Crop 70% Altura (5250x4200)"]
+        FOV --> CLAHE["3. CLAHE Térmico (Espaço Lab)"]
         CLAHE --> SHIFT["4. Alinhamento Afim (-22, -23)"]
         SHIFT --> CONTRACT["Contrato Padronizado\n(output/01_pre_transformacao/)"]
     end
@@ -27,9 +27,18 @@ flowchart LR
     subgraph STAGE_2 ["Notebook 02: Contagem de Pessoas"]
         CONTRACT --> TILING["1. Tiling & Normalização\n(6 patches 224x224)"]
         TILING --> NET["2. ThermalRGBNet\n(Deformable Cross-Attention)"]
-        NET --> DENSITY["3. Mapa de Densidade 2D\n(Reconstrução Espacial)"]
+        DENSITY["3. Mapa de Densidade 2D\n(Reconstrução Espacial)"]
+        NET --> DENSITY
         DENSITY --> COUNT["4. Integração Numérica\n(Contagem de Pessoas)"]
         COUNT --> AUDIT["5. Heatmaps, ROI Zoom\ne Telemetria JSON\n(output/02_contagem/)"]
+    end
+
+    subgraph STAGE_3 ["Notebook 03: Estudo Comparativo"]
+        RAW --> CROP_ONLY["Cenário A: Somente Corte\n(Sem Undistort / Sem Shift)"]
+        RAW --> FULL_PIPE["Cenário B: Pipeline Completo\n(Calibração RGBTImageEqualizer)"]
+        CROP_ONLY --> COMP["Auditoria Lado a Lado\n(Mulher ao Centro + Solo)"]
+        FULL_PIPE --> COMP
+        COMP --> STUDY_OUT["Artefatos do Estudo\n(output/03_estudo_corte_vs_pipeline/)"]
     end
 ```
 
@@ -87,10 +96,15 @@ flowchart LR
 - **Papel:** **Estudo Crítico e Probatório para Alinhamento com a Equipe**.
 - **Pergunta Respondida:** *"Somente o corte da foto RGB já não deixa as imagens 100% proporcionais e sobrepostas?"*
 - **O que ele demonstra visualmente e matematicamente:**
-  1. **Falha de Baseline (Fantasma de 22 pixels):** Mostra no zoom 400% que, ao aplicar somente corte, a silhueta visual do pedestre fica 22 pixels deslocada da sua mancha térmica (efeito visão dupla / blur), confundindo a rede neural.
-  2. **Distorção Radial da Lente 24mm:** Evidencia que as bordas da imagem óptica continuam curvadas sem retificação ($k_1=-0.08$).
+  1. **Falha de Baseline (Mulher ao Centro e Pedestres no Solo):** Mostra que no corte isolado o deslocamento supera 25 pixels (mulher com calor térmico desacoplado do corpo).
+  2. **Distorção Radial da Lente 24mm:** Evidencia que as bordas da imagem óptica continuam curvadas sem retificação no sensor RAW.
   3. **Necessidade do CLAHE:** Demonstra que a térmica bruta possui baixo alcance dinâmico, sendo o CLAHE indispensável para realçar corpos humanos.
-  4. **Tabela Quantitativa:** Compara métricas de gradiente e alinhamento entre a abordagem ingênua e o pipeline completo.
+  4. **Tabela Quantitativa:** Compara métricas de alinhamento entre a abordagem ingênua e o pipeline completo.
+- **Saída (Artefatos do Estudo em `notebooks/output/03_estudo_corte_vs_pipeline/`):**
+  - `comparativo_somente_corte_zoom_mulher.jpg` (Auditoria da mulher ao centro: erro >25px vs 100% de silhueta)
+  - `comparativo_somente_corte_zoom_pedestre.jpg` (Auditoria nos pedestres na base e solo)
+  - `comparativo_auditoria_mulher_corrigida.jpg` (Auditoria técnica do alinhamento)
+  - `resumo_estudo_comparativo.json` (Síntese técnica estruturada do estudo probatório)
 
 ---
 

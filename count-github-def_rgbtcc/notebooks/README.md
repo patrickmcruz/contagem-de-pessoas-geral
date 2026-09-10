@@ -33,6 +33,12 @@ notebooks/
     │   ├── density_map.npy                  # Matriz NumPy contínua do mapa de densidade
     │   └── telemetria_contagem.json         # Métricas de latência e contagem final de pessoas
     │
+    ├── 03_estudo_corte_vs_pipeline/         # 🔹 GERADO PELO NOTEBOOK 03 (Estudo Comparativo)
+    │   ├── comparativo_somente_corte_zoom_mulher.jpg   # Auditoria comparativa na mulher central
+    │   ├── comparativo_somente_corte_zoom_pedestre.jpg # Auditoria comparativa nos pedestres no solo
+    │   ├── comparativo_auditoria_mulher_corrigida.jpg  # Diagnóstico antes/depois da calibração
+    │   └── resumo_estudo_comparativo.json              # Resumo técnico estruturado do estudo
+    │
     └── _arquivo_experimentos/               # Histórico arquivado de testes legados (01_raw a 07_test_01)
 ```
 
