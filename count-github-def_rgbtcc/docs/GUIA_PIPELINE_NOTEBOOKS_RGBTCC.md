@@ -96,14 +96,12 @@ flowchart LR
 - **Papel:** **Estudo Crítico e Probatório para Alinhamento com a Equipe**.
 - **Pergunta Respondida:** *"Somente o corte da foto RGB já não deixa as imagens 100% proporcionais e sobrepostas?"*
 - **O que ele demonstra visualmente e matematicamente:**
-  1. **Falha de Baseline (Mulher ao Centro e Pedestres no Solo):** Mostra que no corte isolado o deslocamento supera 25 pixels (mulher com calor térmico desacoplado do corpo).
-  2. **Distorção Radial da Lente 24mm:** Evidencia que as bordas da imagem óptica continuam curvadas sem retificação no sensor RAW.
-  3. **Necessidade do CLAHE:** Demonstra que a térmica bruta possui baixo alcance dinâmico, sendo o CLAHE indispensável para realçar corpos humanos.
-  4. **Tabela Quantitativa:** Compara métricas de alinhamento entre a abordagem ingênua e o pipeline completo.
+  1. **Falha de Baseline na Mulher ao Centro ($x=[724, 797], y=[588, 706]$):** Comprova que no corte isolado a mancha de calor fica mais de 25 pixels deslocada do corpo da mulher, enquanto no pipeline completo o alinhamento de silhueta é de 100%.
+  2. **Falha de Baseline nos Pedestres na Base ($x=[9, 172], y=[786, 981]$):** Evidencia que a separação entre as lentes cria pessoas duplicadas (fantasmas de 22 px) no solo, induzindo a IA a contar em dobro.
+  3. **Conclusão Técnica e Tabela Resumo:** Tabela comparativa e resumo em JSON comprovando por que o corte isolado é insuficiente.
 - **Saída (Artefatos do Estudo em `notebooks/output/03_estudo_corte_vs_pipeline/`):**
   - `comparativo_somente_corte_zoom_mulher.jpg` (Auditoria da mulher ao centro: erro >25px vs 100% de silhueta)
   - `comparativo_somente_corte_zoom_pedestre.jpg` (Auditoria nos pedestres na base e solo)
-  - `comparativo_auditoria_mulher_corrigida.jpg` (Auditoria técnica do alinhamento)
   - `resumo_estudo_comparativo.json` (Síntese técnica estruturada do estudo probatório)
 
 ---
