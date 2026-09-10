@@ -8,11 +8,11 @@
     "thermal_preprocessed": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\01_pre_transformacao\\thermal_preprocessed.jpg"
   },
   "resultados": {
-    "contagem_pessoas_estimada": 451,
-    "soma_integral_densidade": 451.48,
-    "tempo_inferencia_ms": 1832.7,
+    "contagem_pessoas_estimada": 832,
+    "soma_integral_densidade": 831.87,
+    "tempo_inferencia_ms": 1793.14,
     "densidade_minima": 0.0,
-    "densidade_maxima": 0.86065
+    "densidade_maxima": 1.07055
   },
   "artefatos_gerados": {
     "painel_2x2": "C:\\Users\\User\\Git\\contagem-de-pessoas-def-rgbtcc\\count-github-def_rgbtcc\\notebooks\\output\\02_contagem\\painel_contagem_multimodal.jpg",
