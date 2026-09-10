@@ -37,8 +37,12 @@ def main():
     print("=" * 65)
 
     # 1. Caminhos das imagens originais individuais
-    p_rgb = ROOT_DIR / "notebooks" / "test_01" / "02_rgb_equalized_undistort_shift.jpg"
-    p_th = ROOT_DIR / "notebooks" / "test_01" / "03_thermal_equalized_clahe.jpg"
+    p_dir = ROOT_DIR / "notebooks" / "input" / "test_01"
+    if not p_dir.exists():
+        p_dir = ROOT_DIR / "notebooks" / "test_01"
+
+    p_rgb = p_dir / "02_rgb_equalized_undistort_shift.jpg"
+    p_th = p_dir / "03_thermal_equalized_clahe.jpg"
     out_dir = ROOT_DIR / "notebooks" / "output" / "07_test_01_sem_overlay"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -84,10 +88,20 @@ def main():
             crops_rgb.append(c_rgb)
             crops_th.append(c_th)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Seleção de dispositivo com teste de compatibilidade de kernel
+    device = torch.device('cpu')
+    if torch.cuda.is_available():
+        try:
+            test_conv = torch.nn.Conv2d(1, 1, 1).cuda()
+            _ = test_conv(torch.zeros(1, 1, 3, 3, device='cuda'))
+            device = torch.device('cuda')
+        except Exception:
+            print("[!] GPU detectada, mas sem kernels compatíveis no PyTorch instalado. Usando CPU...")
+            device = torch.device('cpu')
+
     batch_rgb = torch.cat(crops_rgb, dim=0).to(device)
     batch_th = torch.cat(crops_th, dim=0).to(device)
-    print(f"[*] Lote de tensores para GPU: {batch_rgb.shape} no dispositivo {device}")
+    print(f"[*] Lote de tensores para processamento: {batch_rgb.shape} no dispositivo {device}")
 
     # 6. Carregamento do modelo e execução do forward pass
     print("[*] Instanciando ThermalRGBNet (Opção 2 - Pure PyTorch Deformable Attention)...")
@@ -161,7 +175,7 @@ def main():
     plt.savefig(str(f_panel), dpi=150, bbox_inches="tight")
     plt.close()
 
-    print("[✓] Processamento concluído com sucesso!")
+    print("[OK] Processamento concluído com sucesso!")
     print(f"[*] Painel 2x2 salvo em:          {f_panel}")
     print(f"[*] Heatmap sobre RGB salvo em:     {f_rgb_overlay}")
     print(f"[*] Heatmap sobre Térmica salvo em: {f_th_overlay}")
