@@ -70,14 +70,17 @@ notebooks/.venv/bin/python scripts/anotar_pontos.py
 
 ### Principais recursos:
 - **Botão Esquerdo:** Adiciona ponto (cabeça do pedestre).
-- **Botão Direito ou teclas `Z` / `U`:** Desfaz o último ponto anotado (*Undo*).
+- **Botão `[ <- Desfazer ]` (ou Ctrl+Z / Seta <- / Botão Direito):** Desfaz o último ponto anotado (*Undo*).
+- **Botão `[ 💾 Salvar (Ctrl+S) ]` (ou Ctrl+S / S):** Salva o progresso atual em disco (**Checkpoint**) sem fechar a janela.
+- **Botão `[ ✓ Finalizar ]` (ou F / ESC):** Encerra de fato a contagem e gera os relatórios finais.
+- **Continuação Automática:** Ao abrir a mesma imagem, ele detecta automaticamente anotações anteriores e continua de onde você parou!
 - **Tecla `C`:** Limpa todas as anotações.
-- **Teclas `S`, `Q` ou `ESC`:** Salva e fecha.
-- **HUD Integrado:** Mostra total de pessoas e posição do cursor em tempo real.
+- **HUD Integrado:** Placar em tempo real com número de pessoas, feedback do último checkpoint e atalhos.
 - **Artefatos Gerados (em `notebooks/DEF-rgbtcc/output/ground_truth/`):**
   1. `pontos_ground_truth.csv`: Coordenadas `(id, x, y)`.
-  2. `pontos_ground_truth.json`: Metadados completos com dimensões e contagem total.
-  3. `rgb_anotada_ground_truth.jpg`: Imagem com os pontos desenhados para apresentação e auditoria.
+  2. `checkpoint_anotacao.json`: Estado do progresso e metadados.
+  3. `pontos_ground_truth.json`: Metadados completos com dimensões e contagem total.
+  4. `rgb_anotada_ground_truth.jpg`: Imagem com os pontos desenhados para apresentação e auditoria.
 
 ---
 
