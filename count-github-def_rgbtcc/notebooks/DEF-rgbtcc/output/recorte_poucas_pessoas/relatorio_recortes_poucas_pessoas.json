@@ -1,0 +1,83 @@
+{
+  "branch": "feat/contagem-recorte-poucas-pessoas",
+  "timestamp": "2026-09-11T12:57:26",
+  "total_cenas_avaliadas": 4,
+  "resultados": [
+    {
+      "nome": "Área Vazia - Céu e Telhado",
+      "coordenadas_roi": {
+        "x1": 0,
+        "x2": 320,
+        "y1": 0,
+        "y2": 150
+      },
+      "dimensoes_crop": {
+        "largura": 320,
+        "altura": 150
+      },
+      "pessoas_reais_ground_truth": 0,
+      "modelo_def_rgbtcc_estimado": 6.3,
+      "modelo_def_rgbtcc_picos_locais": 10,
+      "modelo_liuzywen_estimado": 467.84,
+      "modelo_liuzywen_token": 0.78,
+      "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_área_vazia___céu_e_telhado.jpg"
+    },
+    {
+      "nome": "Lateral Direita - 5 Pessoas",
+      "coordenadas_roi": {
+        "x1": 832,
+        "x2": 1152,
+        "y1": 448,
+        "y2": 768
+      },
+      "dimensoes_crop": {
+        "largura": 320,
+        "altura": 320
+      },
+      "pessoas_reais_ground_truth": 5,
+      "modelo_def_rgbtcc_estimado": 36.4,
+      "modelo_def_rgbtcc_picos_locais": 17,
+      "modelo_liuzywen_estimado": 937.1,
+      "modelo_liuzywen_token": 0.73,
+      "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_lateral_direita___5_pessoas.jpg"
+    },
+    {
+      "nome": "Calçada de Pedestres no Solo - 9 Pessoas",
+      "coordenadas_roi": {
+        "x1": 100,
+        "x2": 450,
+        "y1": 700,
+        "y2": 1000
+      },
+      "dimensoes_crop": {
+        "largura": 350,
+        "altura": 300
+      },
+      "pessoas_reais_ground_truth": 9,
+      "modelo_def_rgbtcc_estimado": 37.86,
+      "modelo_def_rgbtcc_picos_locais": 28,
+      "modelo_liuzywen_estimado": 996.91,
+      "modelo_liuzywen_token": 0.72,
+      "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_calçada_de_pedestres_no_solo___9_pessoas.jpg"
+    },
+    {
+      "nome": "Canto Inferior Direito - 19 Pessoas",
+      "coordenadas_roi": {
+        "x1": 768,
+        "x2": 1280,
+        "y1": 512,
+        "y2": 1024
+      },
+      "dimensoes_crop": {
+        "largura": 512,
+        "altura": 512
+      },
+      "pessoas_reais_ground_truth": 19,
+      "modelo_def_rgbtcc_estimado": 51.74,
+      "modelo_def_rgbtcc_picos_locais": 20,
+      "modelo_liuzywen_estimado": 2377.13,
+      "modelo_liuzywen_token": 0.77,
+      "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_canto_inferior_direito___19_pessoas.jpg"
+    }
+  ]
+}
