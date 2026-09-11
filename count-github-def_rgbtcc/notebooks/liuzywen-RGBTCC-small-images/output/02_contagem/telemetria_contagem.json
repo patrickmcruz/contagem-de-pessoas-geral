@@ -1,0 +1,24 @@
+{
+  "modelo": "liuzywen-RGBTCC-small-images",
+  "arquitetura": "LiuzywenRGBTCCNet (PVTv2 + MSTTrans + MSDTrans)",
+  "amostra_avaliada": "Calçada de Pedestres no Solo (Fiscais)",
+  "dimensoes": [
+    352,
+    320
+  ],
+  "latencia_ms": 257.86,
+  "fps": 3.9,
+  "metricas_contagem": {
+    "ground_truth_real": 9,
+    "contagem_integral_continua": 1140.41,
+    "contagem_picos_locais": 11,
+    "token_coarse_count": 0.96,
+    "erro_absoluto_integral": 1131.41,
+    "erro_absoluto_picos": 2
+  },
+  "arquivos_saida": {
+    "matriz_npy": "output/02_contagem/density_map.npy",
+    "painel_auditoria": "output/02_contagem/painel_contagem_executivo.jpg",
+    "sobreposicao": "output/02_contagem/sobreposicao_mapa_calor.jpg"
+  }
+}

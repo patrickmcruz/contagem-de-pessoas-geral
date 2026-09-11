@@ -1,0 +1,62 @@
+{
+  "amostra_id": "calcada_9_pessoas",
+  "nome": "Calçada de Pedestres no Solo (Fiscais)",
+  "coordenadas_roi_global": {
+    "x1": 100,
+    "x2": 450,
+    "y1": 700,
+    "y2": 1000
+  },
+  "dimensoes": {
+    "largura": 350,
+    "altura": 300
+  },
+  "total_pessoas_real": 9,
+  "pontos_relativos": [
+    {
+      "id": 18,
+      "x": 12,
+      "y": 5
+    },
+    {
+      "id": 22,
+      "x": 203,
+      "y": 205
+    },
+    {
+      "id": 23,
+      "x": 240,
+      "y": 165
+    },
+    {
+      "id": 24,
+      "x": 282,
+      "y": 201
+    },
+    {
+      "id": 25,
+      "x": 296,
+      "y": 86
+    },
+    {
+      "id": 26,
+      "x": 246,
+      "y": 107
+    },
+    {
+      "id": 27,
+      "x": 249,
+      "y": 53
+    },
+    {
+      "id": 28,
+      "x": 239,
+      "y": 8
+    },
+    {
+      "id": 30,
+      "x": 338,
+      "y": 94
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "amostra_id": "lateral_5_pessoas",
+  "nome": "Lateral Direita com Luminárias",
+  "coordenadas_roi_global": {
+    "x1": 832,
+    "x2": 1152,
+    "y1": 448,
+    "y2": 768
+  },
+  "dimensoes": {
+    "largura": 320,
+    "altura": 320
+  },
+  "total_pessoas_real": 5,
+  "pontos_relativos": [
+    {
+      "id": 43,
+      "x": 18,
+      "y": 299
+    },
+    {
+      "id": 50,
+      "x": 152,
+      "y": 169
+    },
+    {
+      "id": 51,
+      "x": 231,
+      "y": 167
+    },
+    {
+      "id": 52,
+      "x": 132,
+      "y": 142
+    },
+    {
+      "id": 53,
+      "x": 236,
+      "y": 140
+    }
+  ]
+}

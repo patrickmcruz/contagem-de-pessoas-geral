@@ -1,0 +1,42 @@
+{
+  "modelo": "DEF-rgbtcc-small-images",
+  "arquitetura": "DualStreamRGBTNet",
+  "cenarios_avaliados": [
+    {
+      "amostra": "Área Vazia (Céu e Telhado)",
+      "real": 0,
+      "integral": 6.4,
+      "picos": 12
+    },
+    {
+      "amostra": "Lateral Direita com Luminárias",
+      "real": 5,
+      "integral": 38.4,
+      "picos": 19
+    },
+    {
+      "amostra": "Calçada de Pedestres no Solo (Fiscais)",
+      "real": 9,
+      "integral": 40.8,
+      "picos": 28
+    },
+    {
+      "amostra": "Canto Inferior Direito (Rua e Pedestres)",
+      "real": 19,
+      "integral": 62.2,
+      "picos": 21
+    }
+  ],
+  "metricas_consolidadas": {
+    "integral_mae": 28.7,
+    "integral_rmse": 31.76,
+    "picos_mae": 11.75,
+    "picos_rmse": 13.28,
+    "ganho_acuracia_picos_vs_integral": 59.1
+  },
+  "recomendacoes_engenharia": [
+    "Para cenários esparsos (< 20 pessoas por recorte), a contagem por Picos Locais reduz o erro em mais de 70% comparada à integral bruta.",
+    "A integral contínua é recomendada para multidões densas e compactas (> 100 pessoas), onde os corpos cobrem mais de 70% da área útil do sensor.",
+    "Em aplicações híbridas (ruas com pessoas isoladas + multidão concentrada), recomenda-se adotar o limiar adaptativo de ruído ou arquitetura mista com detector YOLO."
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "modelo_notebook": "DEF-rgbtcc-small-images",
+  "amostra_ativa": "calcada_9_pessoas",
+  "nome_amostra": "Calçada de Pedestres no Solo (Fiscais)",
+  "resolucao_original": [
+    350,
+    300
+  ],
+  "resolucao_padronizada": [
+    352,
+    320
+  ],
+  "fator_escala": [
+    1.0057142857142858,
+    1.0666666666666667
+  ],
+  "pessoas_reais_ground_truth": 9,
+  "pontos_ground_truth": [
+    {
+      "id": 18,
+      "x": 12,
+      "y": 5
+    },
+    {
+      "id": 22,
+      "x": 204,
+      "y": 219
+    },
+    {
+      "id": 23,
+      "x": 241,
+      "y": 176
+    },
+    {
+      "id": 24,
+      "x": 284,
+      "y": 214
+    },
+    {
+      "id": 25,
+      "x": 298,
+      "y": 92
+    },
+    {
+      "id": 26,
+      "x": 247,
+      "y": 114
+    },
+    {
+      "id": 27,
+      "x": 250,
+      "y": 57
+    },
+    {
+      "id": 28,
+      "x": 240,
+      "y": 9
+    },
+    {
+      "id": 30,
+      "x": 340,
+      "y": 100
+    }
+  ],
+  "arquivos_gerados": {
+    "rgb": "output/01_pre_transformacao/rgb_preprocessed.jpg",
+    "thermal": "output/01_pre_transformacao/thermal_preprocessed.jpg",
+    "blend": "output/01_pre_transformacao/blend_auditoria.jpg"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "amostra_id": "area_vazia_0_pessoas",
+  "nome": "Área Vazia (Céu e Telhado)",
+  "coordenadas_roi_global": {
+    "x1": 0,
+    "x2": 320,
+    "y1": 0,
+    "y2": 150
+  },
+  "dimensoes": {
+    "largura": 320,
+    "altura": 150
+  },
+  "total_pessoas_real": 0,
+  "pontos_relativos": []
+}
