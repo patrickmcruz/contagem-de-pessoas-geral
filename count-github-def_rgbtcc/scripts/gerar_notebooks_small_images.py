@@ -460,6 +460,10 @@ print("=" * 65)
 
     # Passo 3
     model_load_code = """# Carregar modelo DEF-rgbtcc (DualStreamRGBTNet)
+for k in list(sys.modules.keys()):
+    if k == "models" or k.startswith("models."):
+        del sys.modules[k]
+
 sys.path.insert(0, str(NOTEBOOK_DIR))
 from models.models import DualStreamRGBTNet
 
@@ -476,6 +480,10 @@ model.to(device).eval()
 num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"[✓] Arquitetura 'DualStreamRGBTNet' pronta: {num_params/1e6:.2f}M parâmetros treináveis.")
 """ if is_def else """# Carregar modelo liuzywen-RGBTCC (LiuzywenRGBTCCNet)
+for k in list(sys.modules.keys()):
+    if k == "models" or k.startswith("models."):
+        del sys.modules[k]
+
 sys.path.insert(0, str(NOTEBOOK_DIR))
 from models import build_model
 
@@ -483,6 +491,7 @@ model = build_model(device=device, eval_mode=True)
 num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"[✓] Arquitetura 'LiuzywenRGBTCCNet' pronta: {num_params/1e6:.2f}M parâmetros treináveis.")
 """
+
 
     cells.append(md(f"""## 3. Carregamento da Arquitetura Neural (`{arch_name}`)
 
@@ -701,11 +710,114 @@ plt.show()
 print(f"[✓] Painel de auditoria executivo salvo em: {panel_path}")
 """))
 
-    # Passo 8
-    cells.append(md("""## 8. Exportação de Entregáveis e Telemetria em JSON
+    # Passo 8: Métricas Avançadas de Validação do Modelo (MSE e NAE)
+    cells.append(md(r"""## 8. Métricas Avançadas de Validação do Modelo: MSE e NAE
 
 **O que este código faz:**
-Exporta a matriz de densidade no formato NumPy binário (`density_map.npy`), salva a imagem de sobreposição e grava o relatório estruturado `telemetria_contagem.json` contendo tempos de execução, contagens e erros de medição.
+Calcula e exibe duas métricas quantitativas fundamentais para validação de modelos neurais de contagem baseados em mapas de densidade:
+1. **MSE (Mean Squared Error):**
+   - **MSE Pixel-wise (Mapa 2D):** Mede a fidelidade espacial comparando pixel a pixel o mapa contínuo predito pela rede com o mapa de *Ground Truth* sintético (gerado convoluindo os pontos reais $(x, y)$ anotados por um auditor com uma distribuição gaussiana 2D, $\sigma = 4.0$).
+   - **MSE de Contagem Escalar:** Avalia o desvio quadrático entre a contagem estimada ($\hat{C}$) e o total real ($C$).
+2. **NAE (Normalized Absolute Error):**
+   - Normaliza o erro absoluto pelo total de objetos reais ($\text{NAE} = \frac{|\hat{C} - C|}{C}$), permitindo comparar com justiça o desempenho do modelo em imagens com densidades muito variadas (de poucas pessoas a multidões compactas).
+
+Além disso, constrói um painel gráfico com 3 visões: (1) Mapa de Densidade GT Sintético, (2) Mapa de Densidade Predito e (3) Mapa Residual de Erro Absoluto ($|\text{Predito} - \text{Real}|$).
+
+**Por que esta lógica foi escolhida? (Decisão Técnica)**
+- Em imagens com poucas pessoas, um erro de 5 pessoas em um grupo de 5 representa uma discrepância de 100% ($\text{NAE} = 1.0$), enquanto em 500 pessoas representaria apenas 1% ($\text{NAE} = 0.01$). O NAE elimina a distorção da escala e revela o impacto proporcional do erro.
+- O MSE no mapa bidimensional penaliza severamente ativações espúrias distantes dos pedestres reais, atestando se a rede realmente concentrou a massa de probabilidade sobre as cabeças.
+
+**Efeito prático no resultado:**
+Tabela comparativa de validação no console exibindo o MSE do mapa 2D, MSE/RMSE de contagem e o NAE percentual (para a Integral e para os Picos Locais), acompanhado do gráfico `grafico_validacao_mse_nae.png`.
+"""))
+
+    c8_code_02 = """from scipy.ndimage import gaussian_filter
+
+# 1. Gerar o Mapa de Densidade Sintético de Ground Truth (Convolução Gaussiana 2D)
+dmap_gt = np.zeros((h, w), dtype=np.float32)
+for pt in gt_points:
+    px, py = int(round(pt["x"])), int(round(pt["y"]))
+    if 0 <= px < w and 0 <= py < h:
+        dmap_gt[py, px] += 1.0
+
+# Sigma calibrado para o diâmetro médio da cabeça no recorte (~4 pixels)
+SIGMA_GT = 4.0
+dmap_gt_gaussian = gaussian_filter(dmap_gt, sigma=SIGMA_GT)
+
+# Assegurar que o mapa previsto esteja perfeitamente alinhado na resolução (w, h)
+if density_map.shape[:2] != (h, w):
+    dmap_pred_eval = cv2.resize(density_map, (w, h), interpolation=cv2.INTER_CUBIC)
+    dmap_pred_eval = np.clip(dmap_pred_eval, 0, None)
+else:
+    dmap_pred_eval = density_map.copy()
+
+# 2. Cálculo do MSE (Mean Squared Error)
+# A. MSE no nível de Pixel (Fidelidade espacial da matriz 2D)
+mse_mapa_pixels = float(np.mean((dmap_pred_eval - dmap_gt_gaussian) ** 2))
+
+# B. MSE e RMSE na Contagem Escalar (Integral e Picos)
+mse_contagem_integral = float((count_integral - real_count) ** 2)
+mse_contagem_picos = float((count_picos - real_count) ** 2)
+rmse_contagem_integral = float(np.sqrt(mse_contagem_integral))
+rmse_contagem_picos = float(np.sqrt(mse_contagem_picos))
+
+# 3. Cálculo do NAE (Normalized Absolute Error)
+# Proteção contra divisão por zero para controle negativo (0 pessoas reais)
+denominador_nae = max(real_count, 1)
+nae_integral = float(abs(count_integral - real_count) / denominador_nae)
+nae_picos = float(abs(count_picos - real_count) / denominador_nae)
+
+# 4. Mapa Residual de Erro Espacial (|Predito - Real|)
+mapa_residual = np.abs(dmap_pred_eval - dmap_gt_gaussian)
+
+# Exibição no console
+print("=" * 68)
+print("     MÉTRICAS AVANÇADAS DE VALIDAÇÃO DO MODELO: MSE E NAE")
+print("=" * 68)
+print(f"  • Pessoas Reais (Ground Truth):         {real_count} pessoas")
+print("-" * 68)
+print("  [1] MSE (Mean Squared Error):")
+print(f"      ├─ MSE Pixel-wise (Mapa 2D):        {mse_mapa_pixels:.6f}")
+print(f"      ├─ MSE Contagem (Integral Bruta):    {mse_contagem_integral:.2f} (RMSE: {rmse_contagem_integral:.2f})")
+print(f"      └─ MSE Contagem (Picos Locais):      {mse_contagem_picos:.2f} (RMSE: {rmse_contagem_picos:.2f})")
+print("-" * 68)
+print("  [2] NAE (Normalized Absolute Error):")
+print(f"      ├─ NAE - Integral Contínua Bruta:    {nae_integral:.4f} ({nae_integral * 100:.1f}%)")
+print(f"      └─ NAE - Detecção por Picos Locais:  {nae_picos:.4f} ({nae_picos * 100:.1f}%)")
+print("=" * 68)
+
+# 5. Painel Gráfico Comparativo: Real vs Predito vs Resíduo
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+im0 = axes[0].imshow(dmap_gt_gaussian, cmap="jet")
+axes[0].set_title(f"1. Ground Truth Sintético (Gaussiano)\\nIntegral = {np.sum(dmap_gt_gaussian):.1f} ({real_count} reais)", fontsize=11, fontweight="bold")
+axes[0].axis("off")
+plt.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
+
+im1 = axes[1].imshow(dmap_pred_eval, cmap="jet")
+axes[1].set_title(f"2. Mapa Predito pelo Modelo\\nIntegral = {count_integral:.1f} | Picos = {count_picos}", fontsize=11, fontweight="bold")
+axes[1].axis("off")
+plt.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
+
+im2 = axes[2].imshow(mapa_residual, cmap="magma")
+axes[2].set_title(f"3. Mapa Residual (|Predito - Real|)\\nMSE Mapa: {mse_mapa_pixels:.6f} | NAE Picos: {nae_picos:.2f}", fontsize=11, fontweight="bold", color="darkred")
+axes[2].axis("off")
+plt.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
+
+plt.tight_layout()
+metrics_plot_path = OUTPUT_DIR / "grafico_validacao_mse_nae.png"
+plt.savefig(str(metrics_plot_path), dpi=150, bbox_inches="tight")
+plt.show()
+
+print(f"[✓] Painel de resíduos MSE/NAE salvo em: {metrics_plot_path}")
+"""
+    cells.append(code(c8_code_02))
+
+    # Passo 9: Exportação de Entregáveis e Telemetria em JSON
+    cells.append(md("""## 9. Exportação de Entregáveis e Telemetria em JSON
+
+**O que este código faz:**
+Exporta a matriz de densidade no formato NumPy binário (`density_map.npy`), salva as imagens de auditoria e grava o relatório estruturado `telemetria_contagem.json` contendo tempos de execução, contagens, erros e as métricas de validação calculadas (**MSE** e **NAE**).
 
 **Por que esta lógica foi escolhida?**
 A persistência estruturada em JSON permite integrar os resultados com sistemas de dashboards, relatórios automatizados em PDF/Word e com o **Notebook 03** para consolidação de estudos em lote.
@@ -714,7 +826,7 @@ A persistência estruturada em JSON permite integrar os resultados com sistemas 
 Todos os artefatos ficam disponíveis em disco prontos para auditoria e consumo downstream.
 """))
 
-    cells.append(code("""np.save(str(OUTPUT_DIR / "density_map.npy"), density_map)
+    c9_code_export = """np.save(str(OUTPUT_DIR / "density_map.npy"), density_map)
 cv2.imwrite(str(OUTPUT_DIR / "sobreposicao_mapa_calor.jpg"), cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
 
 telemetria = {
@@ -732,10 +844,21 @@ telemetria = {
         "erro_absoluto_integral": round(abs(erro_integral), 2),
         "erro_absoluto_picos": abs(erro_picos)
     },
+    "metricas_validacao": {
+        "mse_pixelwise_mapa_2d": round(mse_mapa_pixels, 6),
+        "mse_contagem_integral": round(mse_contagem_integral, 2),
+        "rmse_contagem_integral": round(rmse_contagem_integral, 2),
+        "mse_contagem_picos": round(mse_contagem_picos, 2),
+        "rmse_contagem_picos": round(rmse_contagem_picos, 2),
+        "nae_integral": round(nae_integral, 4),
+        "nae_picos": round(nae_picos, 4),
+        "nae_picos_percentual": f"{nae_picos * 100:.1f}%"
+    },
     "arquivos_saida": {
         "matriz_npy": "output/02_contagem/density_map.npy",
         "painel_auditoria": "output/02_contagem/painel_contagem_executivo.jpg",
-        "sobreposicao": "output/02_contagem/sobreposicao_mapa_calor.jpg"
+        "sobreposicao": "output/02_contagem/sobreposicao_mapa_calor.jpg",
+        "grafico_validacao_mse_nae": "output/02_contagem/grafico_validacao_mse_nae.png"
     }
 }
 
@@ -746,28 +869,29 @@ with open(tel_path, "w", encoding="utf-8") as f:
 print("=" * 65)
 print("     ESTÁGIO 2 CONCLUÍDO: ENTREGÁVEIS E TELEMETRIA GERADOS")
 print("=" * 65)
-print(f"1. Matriz Numérica 2D:   {OUTPUT_DIR / 'density_map.npy'}")
-print(f"2. Painel Executivo:     {panel_path}")
-print(f"3. Imagem Sobreposta:    {OUTPUT_DIR / 'sobreposicao_mapa_calor.jpg'}")
+print(f"1. Matriz Numérica 2D:     {OUTPUT_DIR / 'density_map.npy'}")
+print(f"2. Painel Executivo:       {panel_path}")
+print(f"3. Gráfico Validação MSE:  {metrics_plot_path}")
 print(f"4. Telemetria Estruturada: {tel_path}")
 print("=" * 65)
-"""))
+"""
+    cells.append(code(c9_code_export))
 
-    # Passo 9: Apresentação Executiva em Texto e Card Visual
-    cells.append(md("""## 9. Apresentação Executiva: Resultado da Contagem em Texto
+    # Passo 10: Apresentação Executiva em Texto e Card Visual
+    cells.append(md("""## 10. Apresentação Executiva: Resultado da Contagem em Texto
 
 **O que este código faz:**
-Exibe um resumo executivo direto e em destaque dos resultados obtidos no console (contagem discreta estimada, pessoas reais no Ground Truth, erro absoluto e tempo de inferência), além de renderizar um card visual HTML de alto impacto para apresentação executiva.
+Exibe um resumo executivo direto e em destaque dos resultados obtidos no console (contagem discreta estimada, pessoas reais no Ground Truth, erro absoluto, métricas de validação **MSE** e **NAE** e tempo de inferência), além de renderizar um card visual HTML de alto impacto para apresentação executiva.
 
 **Por que esta lógica foi escolhida?**
 Apresentações para gestores e relatórios de campo demandam clareza e síntese imediata sem a necessidade de inspecionar arrays numéricos ou arquivos JSON. O bloco textual formatado em destaque e o card HTML oferecem uma leitura limpa, padronizada e autoexplicativa.
 
 **Efeito prático no resultado:**
-Um bloco de texto formatado com moldura no console com o número final de pessoas estimadas, acurácia frente ao Ground Truth humano e um card visual estilizado com as métricas do modelo.
+Um bloco de texto formatado com moldura no console com o número final de pessoas estimadas, métricas quantitativas de MSE/NAE e um card visual estilizado com as métricas do modelo.
 """))
 
-    c9_code_02 = """# ==============================================================================
-# 9. APRESENTAÇÃO EXECUTIVA: RESULTADO DA CONTAGEM EM TEXTO
+    c10_code_02 = """# ==============================================================================
+# 10. APRESENTAÇÃO EXECUTIVA: RESULTADO DA CONTAGEM EM TEXTO
 # ==============================================================================
 import json
 from pathlib import Path
@@ -783,6 +907,8 @@ try:
     _fps = fps
     _dev = str(device)
     _amostra = meta.get("nome_amostra", "Recorte Baixa Densidade")
+    _mse_mapa = mse_mapa_pixels
+    _nae_picos = nae_picos
 except NameError:
     _tel = Path("output/02_contagem/telemetria_contagem.json")
     with open(_tel, "r", encoding="utf-8") as _f:
@@ -795,6 +921,9 @@ except NameError:
     _fps = _d["fps"]
     _dev = "GPU/CPU"
     _amostra = _d.get("amostra_avaliada", "Recorte Baixa Densidade")
+    _mv = _d.get("metricas_validacao", {})
+    _mse_mapa = _mv.get("mse_pixelwise_mapa_2d", 0.0)
+    _nae_picos = _mv.get("nae_picos", 0.0)
 
 # 1. Exibição textual destacada para leitura direta e apresentação
 print("=" * 68)
@@ -806,6 +935,8 @@ print("-" * 68)
 print(f"  • Cenário Avaliado:              {_amostra}")
 print(f"  • Erro Absoluto da Contagem:     {abs(_erro_picos)} pessoa(s)")
 print(f"  • Integral Contínua (Densidade): {_count_integral:.2f}")
+print(f"  • MSE do Mapa de Densidade 2D:   {_mse_mapa:.6f}")
+print(f"  • NAE (Erro Normalizado Picos):  {_nae_picos:.4f} ({_nae_picos * 100:.1f}%)")
 print(f"  • Tempo de Inferência:           {_time_ms:.1f} ms ({_fps:.1f} FPS)")
 print(f"  • Dispositivo de Processamento:  {_dev}")
 print("=" * 68)
@@ -819,13 +950,14 @@ card_html = f\"\"\"<div style="font-family: 'Segoe UI', -apple-system, BlinkMacS
     <div style="font-size: 32px; font-weight: 800; color: #4ade80; margin: 6px 0 10px 0; line-height: 1.2;">👥 {_count_picos} Pessoas Estimadas <span style="font-size: 18px; color: #94a3b8; font-weight: 500;">(Real: {_real})</span></div>
     <div style="font-size: 14px; color: #cbd5e1; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 10px; line-height: 1.6;">
         <b>Cenário:</b> {_amostra}<br>
-        <b>Acurácia:</b> Erro de {abs(_erro_picos)} pessoa(s) | <b>Integral Bruta:</b> {_count_integral:.2f}<br>
+        <b>Acurácia:</b> Erro de {abs(_erro_picos)} pessoa(s) | <b>NAE Picos:</b> {_nae_picos * 100:.1f}%<br>
+        <b>MSE Mapa 2D:</b> {_mse_mapa:.6f} | <b>Integral Bruta:</b> {_count_integral:.2f}<br>
         <b>Tempo de Inferência:</b> {_time_ms:.1f} ms ({_fps:.1f} FPS) | <b>Dispositivo:</b> {_dev}
     </div>
 </div>\"\"\"
 display(HTML(card_html))
 """
-    cells.append(code(c9_code_02))
+    cells.append(code(c10_code_02))
 
     return make_notebook(cells)
 
@@ -1229,6 +1361,9 @@ Este diretório contém a suíte completa de notebooks interativos dedicados ao 
    - Dupla estratégia de contagem: **Integral Contínua** vs **Picos Locais (Filtragem de Ruído)**.
    - Confronto imediato com Ground Truth humano.
    - Painel de auditoria executivo em 5 colunas salvo em `output/02_contagem/`.
+   - **Métricas Avançadas de Validação:** Cálculo e gráfico de resíduos de **MSE** (fidelidade do mapa 2D) e **NAE** (erro absoluto normalizado).
+   - Apresentação executiva em texto formatado e card visual HTML.
+
 
 3. **[`03_estudo_densidade_e_metricas_poucas_pessoas.ipynb`](03_estudo_densidade_e_metricas_poucas_pessoas.ipynb):**
    - Processamento em lote de todas as amostras curadas.

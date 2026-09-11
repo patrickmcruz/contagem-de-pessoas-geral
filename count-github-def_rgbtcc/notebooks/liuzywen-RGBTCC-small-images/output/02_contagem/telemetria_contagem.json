@@ -6,19 +6,30 @@
     352,
     320
   ],
-  "latencia_ms": 2.69,
-  "fps": 372.2,
+  "latencia_ms": 51.61,
+  "fps": 19.4,
   "metricas_contagem": {
     "ground_truth_real": 9,
-    "contagem_integral_continua": 40.8,
-    "contagem_picos_locais": 26,
-    "token_coarse_count": 0.0,
-    "erro_absoluto_integral": 31.8,
-    "erro_absoluto_picos": 17
+    "contagem_integral_continua": 1339.6,
+    "contagem_picos_locais": 9,
+    "token_coarse_count": 0.59,
+    "erro_absoluto_integral": 1330.6,
+    "erro_absoluto_picos": 0
+  },
+  "metricas_validacao": {
+    "mse_pixelwise_mapa_2d": 0.579666,
+    "mse_contagem_integral": 1770498.89,
+    "rmse_contagem_integral": 1330.6,
+    "mse_contagem_picos": 0.0,
+    "rmse_contagem_picos": 0.0,
+    "nae_integral": 147.8446,
+    "nae_picos": 0.0,
+    "nae_picos_percentual": "0.0%"
   },
   "arquivos_saida": {
     "matriz_npy": "output/02_contagem/density_map.npy",
     "painel_auditoria": "output/02_contagem/painel_contagem_executivo.jpg",
-    "sobreposicao": "output/02_contagem/sobreposicao_mapa_calor.jpg"
+    "sobreposicao": "output/02_contagem/sobreposicao_mapa_calor.jpg",
+    "grafico_validacao_mse_nae": "output/02_contagem/grafico_validacao_mse_nae.png"
   }
 }

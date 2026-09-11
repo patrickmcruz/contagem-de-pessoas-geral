@@ -17,6 +17,9 @@ Este diretório contém a suíte completa de notebooks interativos dedicados ao 
    - Dupla estratégia de contagem: **Integral Contínua** vs **Picos Locais (Filtragem de Ruído)**.
    - Confronto imediato com Ground Truth humano.
    - Painel de auditoria executivo em 5 colunas salvo em `output/02_contagem/`.
+   - **Métricas Avançadas de Validação:** Cálculo e gráfico de resíduos de **MSE** (fidelidade do mapa 2D) e **NAE** (erro absoluto normalizado).
+   - Apresentação executiva em texto formatado e card visual HTML.
+
 
 3. **[`03_estudo_densidade_e_metricas_poucas_pessoas.ipynb`](03_estudo_densidade_e_metricas_poucas_pessoas.ipynb):**
    - Processamento em lote de todas as amostras curadas.
