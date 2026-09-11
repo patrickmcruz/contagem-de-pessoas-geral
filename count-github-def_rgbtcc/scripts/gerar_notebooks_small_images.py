@@ -753,7 +753,82 @@ print(f"4. Telemetria Estruturada: {tel_path}")
 print("=" * 65)
 """))
 
+    # Passo 9: Apresentação Executiva em Texto e Card Visual
+    cells.append(md("""## 9. Apresentação Executiva: Resultado da Contagem em Texto
+
+**O que este código faz:**
+Exibe um resumo executivo direto e em destaque dos resultados obtidos no console (contagem discreta estimada, pessoas reais no Ground Truth, erro absoluto e tempo de inferência), além de renderizar um card visual HTML de alto impacto para apresentação executiva.
+
+**Por que esta lógica foi escolhida?**
+Apresentações para gestores e relatórios de campo demandam clareza e síntese imediata sem a necessidade de inspecionar arrays numéricos ou arquivos JSON. O bloco textual formatado em destaque e o card HTML oferecem uma leitura limpa, padronizada e autoexplicativa.
+
+**Efeito prático no resultado:**
+Um bloco de texto formatado com moldura no console com o número final de pessoas estimadas, acurácia frente ao Ground Truth humano e um card visual estilizado com as métricas do modelo.
+"""))
+
+    c9_code_02 = """# ==============================================================================
+# 9. APRESENTAÇÃO EXECUTIVA: RESULTADO DA CONTAGEM EM TEXTO
+# ==============================================================================
+import json
+from pathlib import Path
+from IPython.display import display, HTML
+
+# Recuperação das variáveis (da memória ou do arquivo de telemetria)
+try:
+    _count_picos = count_picos
+    _count_integral = count_integral
+    _real = real_count
+    _erro_picos = erro_picos
+    _time_ms = latency_ms
+    _fps = fps
+    _dev = str(device)
+    _amostra = meta.get("nome_amostra", "Recorte Baixa Densidade")
+except NameError:
+    _tel = Path("output/02_contagem/telemetria_contagem.json")
+    with open(_tel, "r", encoding="utf-8") as _f:
+        _d = json.load(_f)
+    _count_picos = _d["metricas_contagem"]["contagem_picos_locais"]
+    _count_integral = _d["metricas_contagem"]["contagem_integral_continua"]
+    _real = _d["metricas_contagem"]["ground_truth_real"]
+    _erro_picos = _d["metricas_contagem"]["erro_absoluto_picos"]
+    _time_ms = _d["latencia_ms"]
+    _fps = _d["fps"]
+    _dev = "GPU/CPU"
+    _amostra = _d.get("amostra_avaliada", "Recorte Baixa Densidade")
+
+# 1. Exibição textual destacada para leitura direta e apresentação
+print("=" * 68)
+print(f"       RESULTADO DA CONTAGEM EM RECORTES ({MODELO_NOME.upper()})")
+print("=" * 68)
+print(f"  >>> TOTAL ESTIMADO (PICOS LOCAIS): {_count_picos} PESSOAS <<<")
+print(f"  >>> TOTAL REAL (GROUND TRUTH):     {_real} PESSOAS <<<")
+print("-" * 68)
+print(f"  • Cenário Avaliado:              {_amostra}")
+print(f"  • Erro Absoluto da Contagem:     {abs(_erro_picos)} pessoa(s)")
+print(f"  • Integral Contínua (Densidade): {_count_integral:.2f}")
+print(f"  • Tempo de Inferência:           {_time_ms:.1f} ms ({_fps:.1f} FPS)")
+print(f"  • Dispositivo de Processamento:  {_dev}")
+print("=" * 68)
+
+# 2. Card visual executivo
+_card_color = "#38bdf8" if "def" in MODELO_NOME.lower() else "#a855f7"
+_badge_color = "#7dd3fc" if "def" in MODELO_NOME.lower() else "#d8b4fe"
+
+card_html = f\"\"\"<div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; max-width: 620px; margin: 15px 0; padding: 20px 26px; background: #0f172a; border-radius: 12px; border-left: 6px solid {_card_color}; box-shadow: 0 4px 15px rgba(0,0,0,0.25); color: #f8fafc;">
+    <div style="text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px; font-weight: 700; color: {_badge_color}; margin-bottom: 6px;">Relatório Executivo • {MODELO_NOME}</div>
+    <div style="font-size: 32px; font-weight: 800; color: #4ade80; margin: 6px 0 10px 0; line-height: 1.2;">👥 {_count_picos} Pessoas Estimadas <span style="font-size: 18px; color: #94a3b8; font-weight: 500;">(Real: {_real})</span></div>
+    <div style="font-size: 14px; color: #cbd5e1; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 10px; line-height: 1.6;">
+        <b>Cenário:</b> {_amostra}<br>
+        <b>Acurácia:</b> Erro de {abs(_erro_picos)} pessoa(s) | <b>Integral Bruta:</b> {_count_integral:.2f}<br>
+        <b>Tempo de Inferência:</b> {_time_ms:.1f} ms ({_fps:.1f} FPS) | <b>Dispositivo:</b> {_dev}
+    </div>
+</div>\"\"\"
+display(HTML(card_html))
+"""
+    cells.append(code(c9_code_02))
+
     return make_notebook(cells)
+
 
 
 # ==============================================================================
