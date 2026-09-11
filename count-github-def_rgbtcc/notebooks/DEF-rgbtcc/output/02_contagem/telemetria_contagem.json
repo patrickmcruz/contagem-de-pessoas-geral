@@ -1,24 +1,37 @@
 {
   "etapa": "02_contagem_pessoas_def_rgbtcc",
-  "timestamp": "2026-09-10 14:08:18",
+  "timestamp": "2026-09-11 13:51:37",
   "modelo": {
     "nome": "DEFRGBTCCNet",
     "artigo_referencia": "arXiv:2509.17079",
     "checkpoint": "vgg19_pretrained_calibrated",
     "dispositivo_execucao": "cuda",
-    "tempo_inferencia_segundos": 0.2187,
-    "fps_estimado": 4.57,
-    "fator_fusao_afm_w_rgb": 0.4121
+    "tempo_inferencia_segundos": 0.2292,
+    "fps_estimado": 4.36,
+    "fator_fusao_afm_w_rgb": 0.003
   },
   "contagem_resultado": {
-    "total_continuo": 88.34,
-    "total_discreto_estimado": 88
+    "ground_truth_real": 505,
+    "total_continuo": 86.89,
+    "total_discreto_estimado": 87,
+    "total_picos_locais": 14424,
+    "erro_absoluto_picos": 13919
+  },
+  "metricas_validacao": {
+    "mse_pixelwise_mapa_2d": 3e-06,
+    "mse_contagem_integral": 174813.78,
+    "rmse_contagem_integral": 418.11,
+    "mse_contagem_picos": 193738561.0,
+    "rmse_contagem_picos": 13919.0,
+    "nae_integral": 0.8279,
+    "nae_picos": 27.5624,
+    "nae_picos_percentual": "2756.2%"
   },
   "arquivos_gerados": {
     "density_matrix_npy": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/density_map.npy",
     "painel_executivo": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/painel_contagem_multimodal.jpg",
     "heatmap_sobre_rgb": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/heatmap_sobre_rgb.jpg",
     "heatmap_sobre_termica": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/heatmap_sobre_termica.jpg",
-    "zoom_roi_pedestres": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/zoom_roi_pedestres_densidade.jpg"
+    "grafico_validacao_mse_nae": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc/output/02_contagem/grafico_validacao_mse_nae.png"
   }
 }
