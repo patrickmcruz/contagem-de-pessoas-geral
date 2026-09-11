@@ -1,12 +1,12 @@
 # Relatório Executivo e Resumo Técnico dos Pipelines de Contagem de Pessoas
 
-> **Data de Geração:** 11/09/2026 às 15:27:38  
+> **Data de Geração:** 11/09/2026 às 15:39:53  
 > **Branch de Desenvolvimento:** `feat/relatorio-apresentacao-notebooks`  
 > **Hardware de Execução:** NVIDIA RTX 4090 24GB (CUDA 12.4)
 
 ---
 
-## 1. Sumário Executivo e Tabela Comparativa de Desempenho
+## 1. Sumário e Tabela Comparativa de Desempenho
 
 Este relatório consolida a arquitetura, as justificativas técnicas e os resultados quantitativos de todos os notebooks de desenvolvimento criados para os dois modelos multimodais de ponta (**DEF-RGBTCC** e **liuzywen-RGBTCC**), cobrindo tanto a análise de **Cena Completa** quanto o regime de **Recortes em Baixa Densidade**.
 
@@ -27,7 +27,7 @@ Este relatório consolida a arquitetura, as justificativas técnicas e os result
 - **Cenário de Aplicação:** Imagem Completa Panorâmica (1280x1024 px)
 - **Diretório no Projeto:** [`notebooks/DEF-rgbtcc`](file:///home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc)
 
-### Caderno: `01_pre_transformacao_alinhamento.ipynb`
+### Notebook: `01_pre_transformacao_alinhamento.ipynb`
 **01. Pré-Transformação e Co-Registro Óptico-Térmico**  
 *Homogeneização dimensional, equalização CLAHE e retificação de lente grande-angular.*
 
@@ -61,18 +61,13 @@ Este relatório consolida a arquitetura, as justificativas técnicas e os result
 ```
 
 #### 5. Passo 3 - Equalização Radiométrica Térmica (CLAHE no Espaço Lab)
-- **O que este código faz:** Convertemos a imagem térmica para o espaço de cor **Lab** e aplicamos **CLAHE** (`clipLimit=2.5`, `grid=(8,8)`) estritamente no canal $L$ (luminância). > Para a justificativa física sobre emissividade térmica de microbolômetros e a explicação de por que a equalização convencional estoura o ruído do asfalto, consulte: > 🔗 [`docs/EXPLICACAO_DECISOES_NOTEBOOK_01.md` (Decisão 03: Equalização Radiométrica da Térmica)](docs/EXPLICACAO_DECISOES_NOTEBOOK_01.md#decisao-03-equalizacao-radiometrica-da-termica-clahe-no-espaco-lab)
 #### 6. Passo 4 - Padronização de Resolução ($1280 	imes 1024$) e Deslocamento Afim ($dx=-22, dy=-23$)
-- **O que este código faz:** Reamostramos RGB e Térmica para a resolução padrão $1280 	imes 1024	ext{ px}$ (divisível por 32). Aplicamos a matriz afim $dx=-22	ext{ px}$ e $dy=-23	ext{ px}$ na imagem RGB para alinhar as silhuetas dos pedestres no plano do solo. > Para a teoria de baseline estéreo em drones, a relação altitude/paralaxe $d = (f \cdot B)/Z$ e a justificativa de descarte de homografia dinâmica por SIFT/ORB, consulte: > 🔗 [`docs/EXPLICACAO_DECISOES_NOTEBOOK_01.md` (Decisão 04: Padronização de Resolução e Compensação Afim)](docs/EXPLICACAO_DECISOES_NOTEBOOK_01.md#decisao-04-padronizacao-de-resolucao-e-compensacao-afim-de-baseline-estereo)
-
 ```text
 [✓] Imagem RGB Transladada: dx = -22 px | dy = -23 px
 [✓] Resolução Final Alinhada: 1280x1024 px
 ```
 
 #### 7. Passo 5 - Validação Bit-a-Bit com a Classe de Produção (`RGBTImageEqualizer`)
-- **O que este código faz:** Instanciamos a classe `RGBTImageEqualizer` do módulo oficial `app/` e comprovamos que o código deste notebook produz **exatamente os mesmos pixels** que o sistema de produção (diferença máxima de 0.00000 px). > Para a governança de software, reprodutibilidade científica e eliminação do problema 'no meu notebook funciona e em produção não', consulte: > 🔗 [`docs/EXPLICACAO_DECISOES_NOTEBOOK_01.md` (Decisão 05: Validação de Paridade Bit-a-Bit)](docs/EXPLICACAO_DECISOES_NOTEBOOK_01.md#decisao-05-validacao-de-paridade-bit-a-bit-com-a-classe-de-producao)
-
 ```text
 ============================================================
        VALIDAÇÃO DE PARIDADE DE SOFTWARE (BIT-A-BIT)
@@ -83,10 +78,7 @@ Este relatório consolida a arquitetura, as justificativas técnicas e os result
 ```
 
 #### 8. Passo 6 - Auditoria Visual Sub-Pixel e Blend de Sobreposição
-- **O que este código faz:** Geramos o blend 50% RGB + 50% Térmica e visualizamos com zoom nos alvos críticos: - **Mulher Central ($x=[699, 781], y=[566, 678]$):** Alinhamento vertical da silhueta. - **Pedestres na Base ($x=[9, 172], y=[786, 981]$):** Encaixe térmico no plano do solo.
 #### 9. Passo 7 - Exportação do Contrato de Insumos Padronizados e Metadados
-- **O que este código faz:** Gravamos o contrato formal consumido pelo **Notebook 02** em `output/01_pre_transformacao/`: - `rgb_preprocessed.jpg`: Imagem óptica corrigida, recortada e transladada. - `thermal_preprocessed.jpg`: Imagem térmica equalizada com CLAHE.
-
 ```text
 =================================================================
      ESTÁGIO 1 CONCLUÍDO: CONTRATO DE INSUMOS GERADO COM SUCESSO
@@ -100,8 +92,7 @@ Este relatório consolida a arquitetura, as justificativas técnicas e os result
 ```
 
 
-
-### Caderno: `02_contagem_pessoas_rgbtcc.ipynb`
+### Notebook: `02_contagem_pessoas_rgbtcc.ipynb`
 **02. Inferência Neural e Validação (MSE & NAE)**  
 *Regressão de densidade contínua na cena completa, avaliação com 532 pessoas reais.*
 
@@ -238,7 +229,7 @@ Gera também um painel comparativo de resíduos espaciais com 3 visões: (1) Gro
 
 
 
-### Caderno: `03_estudo_somente_corte_vs_pipeline_completo.ipynb`
+### Notebook: `03_estudo_somente_corte_vs_pipeline_completo.ipynb`
 **03. Estudo Comparativo: Corte Ingênuo vs Pipeline Oficial**  
 *Demonstração quantitativa da necessidade de calibração geométrica multiespectral.*
 
@@ -293,7 +284,7 @@ Gera também um painel comparativo de resíduos espaciais com 3 visões: (1) Gro
 - **Cenário de Aplicação:** Imagem Completa Panorâmica (1280x1024 px)
 - **Diretório no Projeto:** [`notebooks/liuzywen-RGBTCC`](file:///home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/liuzywen-RGBTCC)
 
-### Caderno: `01_pre_transformacao_alinhamento.ipynb`
+### Notebook: `01_pre_transformacao_alinhamento.ipynb`
 **01. Pré-Transformação e Alinhamento Multimodal**  
 *Ingestão, equalização local CLAHE e padronização para múltiplo de 32 (640x512).*
 
@@ -367,7 +358,7 @@ Gera também um painel comparativo de resíduos espaciais com 3 visões: (1) Gro
 
 
 
-### Caderno: `02_contagem_pessoas_rgbtcc.ipynb`
+### Notebook: `02_contagem_pessoas_rgbtcc.ipynb`
 **02. Inferência via Atenção Cruzada e Detecção de Picos**  
 *Extração de picos de densidade pontuais, validação espacial MSE e NAE (532 pessoas).*
 
@@ -482,7 +473,7 @@ Constrói também o painel comparativo em 3 visões: (1) Ground Truth Sintético
 - **Cenário de Aplicação:** Recortes de Alta Atenção (Regime de Baixa Densidade)
 - **Diretório no Projeto:** [`notebooks/DEF-rgbtcc-small-images`](file:///home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/DEF-rgbtcc-small-images)
 
-### Caderno: `01_pre_transformacao_recorte.ipynb`
+### Notebook: `01_pre_transformacao_recorte.ipynb`
 **01. Pré-Transformação e Padronização de Recortes**  
 *Recorte de alta resolução, equalização adaptativa e alinhamento do par recortado.*
 
@@ -518,7 +509,7 @@ $$\text{Blend} = 0.50 \times \text{RGB} + 0.50 \times \text{Térmica}$$
 - **Efeito Prático no Resultado:** Arquivos gravados com sucesso e prontos para alimentar as redes neurais.
 
 
-### Caderno: `02_contagem_pessoas_recorte.ipynb`
+### Notebook: `02_contagem_pessoas_recorte.ipynb`
 **02. Inferência em Recorte e Supressão de Não-Máximos**  
 *Comparação entre contagem contínua bruta e detecção de cabeças individuais via picos.*
 
@@ -678,7 +669,7 @@ Além disso, constrói um painel gráfico com 3 visões: (1) Mapa de Densidade G
 
 
 
-### Caderno: `03_estudo_densidade_e_metricas_poucas_pessoas.ipynb`
+### Notebook: `03_estudo_densidade_e_metricas_poucas_pessoas.ipynb`
 **03. Estudo Comparativo nos 4 Cenários de Teste**  
 *Quantificação do erro em área vazia (0), luminárias (5), calçada (9) e canto (19).*
 
@@ -711,7 +702,7 @@ Além disso, constrói um painel gráfico com 3 visões: (1) Mapa de Densidade G
 - **Cenário de Aplicação:** Recortes de Alta Atenção (Regime de Baixa Densidade)
 - **Diretório no Projeto:** [`notebooks/liuzywen-RGBTCC-small-images`](file:///home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/notebooks/liuzywen-RGBTCC-small-images)
 
-### Caderno: `01_pre_transformacao_recorte.ipynb`
+### Notebook: `01_pre_transformacao_recorte.ipynb`
 **01. Pré-Transformação e Normalização do Recorte**  
 *Equalização de luminância e preparação de tensores de recorte para o Vision Transformer.*
 
@@ -747,7 +738,7 @@ $$\text{Blend} = 0.50 \times \text{RGB} + 0.50 \times \text{Térmica}$$
 - **Efeito Prático no Resultado:** Arquivos gravados com sucesso e prontos para alimentar as redes neurais.
 
 
-### Caderno: `02_contagem_pessoas_recorte.ipynb`
+### Notebook: `02_contagem_pessoas_recorte.ipynb`
 **02. Inferência via Atenção e Picos Morfológicos**  
 *Eliminação de ruído residual de fundo por filtragem morfológica 2D de picos locais.*
 
@@ -908,7 +899,7 @@ Além disso, constrói um painel gráfico com 3 visões: (1) Mapa de Densidade G
 
 
 
-### Caderno: `03_estudo_densidade_e_metricas_poucas_pessoas.ipynb`
+### Notebook: `03_estudo_densidade_e_metricas_poucas_pessoas.ipynb`
 **03. Estudo Comparativo de Desempenho e Ruído Residual**  
 *Análise analítica de robustez frente a ruídos de textura e luminárias em baixa densidade.*
 

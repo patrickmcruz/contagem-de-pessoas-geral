@@ -1,13 +1,13 @@
 {
   "modelo": "DEF-rgbtcc-small-images",
   "arquitetura": "DualStreamRGBTNet (VGG-19 + Modulação Espacial)",
-  "amostra_avaliada": "Calçada de Pedestres no Solo (Fiscais)",
+  "amostra_avaliada": "Calçada de Pedestres no Solo (Defesa Civil)",
   "dimensoes": [
     352,
     320
   ],
-  "latencia_ms": 238.07,
-  "fps": 4.2,
+  "latencia_ms": 244.63,
+  "fps": 4.1,
   "metricas_contagem": {
     "ground_truth_real": 9,
     "contagem_integral_continua": 40.8,

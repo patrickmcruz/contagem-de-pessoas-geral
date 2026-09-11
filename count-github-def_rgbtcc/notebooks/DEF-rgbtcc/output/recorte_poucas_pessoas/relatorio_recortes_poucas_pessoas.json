@@ -1,6 +1,6 @@
 {
   "branch": "feat/contagem-recorte-poucas-pessoas",
-  "timestamp": "2026-09-11T12:57:26",
+  "timestamp": "2026-09-11T14:06:27",
   "total_cenas_avaliadas": 4,
   "resultados": [
     {
@@ -18,8 +18,8 @@
       "pessoas_reais_ground_truth": 0,
       "modelo_def_rgbtcc_estimado": 6.3,
       "modelo_def_rgbtcc_picos_locais": 10,
-      "modelo_liuzywen_estimado": 467.84,
-      "modelo_liuzywen_token": 0.78,
+      "modelo_liuzywen_estimado": 481.13,
+      "modelo_liuzywen_token": 0.67,
       "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_área_vazia___céu_e_telhado.jpg"
     },
     {
@@ -37,8 +37,8 @@
       "pessoas_reais_ground_truth": 5,
       "modelo_def_rgbtcc_estimado": 36.4,
       "modelo_def_rgbtcc_picos_locais": 17,
-      "modelo_liuzywen_estimado": 937.1,
-      "modelo_liuzywen_token": 0.73,
+      "modelo_liuzywen_estimado": 984.45,
+      "modelo_liuzywen_token": 0.79,
       "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_lateral_direita___5_pessoas.jpg"
     },
     {
@@ -56,8 +56,8 @@
       "pessoas_reais_ground_truth": 9,
       "modelo_def_rgbtcc_estimado": 37.86,
       "modelo_def_rgbtcc_picos_locais": 28,
-      "modelo_liuzywen_estimado": 996.91,
-      "modelo_liuzywen_token": 0.72,
+      "modelo_liuzywen_estimado": 1075.25,
+      "modelo_liuzywen_token": 0.65,
       "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_calçada_de_pedestres_no_solo___9_pessoas.jpg"
     },
     {
@@ -75,8 +75,8 @@
       "pessoas_reais_ground_truth": 19,
       "modelo_def_rgbtcc_estimado": 51.74,
       "modelo_def_rgbtcc_picos_locais": 20,
-      "modelo_liuzywen_estimado": 2377.13,
-      "modelo_liuzywen_token": 0.77,
+      "modelo_liuzywen_estimado": 2461.84,
+      "modelo_liuzywen_token": 0.67,
       "painel_auditoria": "notebooks/DEF-rgbtcc/output/recorte_poucas_pessoas/painel_canto_inferior_direito___19_pessoas.jpg"
     }
   ]

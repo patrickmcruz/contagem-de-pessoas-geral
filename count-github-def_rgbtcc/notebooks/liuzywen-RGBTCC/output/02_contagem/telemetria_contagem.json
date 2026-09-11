@@ -2,10 +2,10 @@
   "pipeline_stage": "02_contagem_pessoas_rgbtcc",
   "architecture": "liuzywen-RGBTCC (BMVC 2022)",
   "paper": "RGB-T Multi-Modal Crowd Counting Based on Transformer (Liu et al., 2022)",
-  "timestamp": "2026-09-11 15:11:41",
+  "timestamp": "2026-09-11 15:14:17",
   "compute_device": "cuda",
-  "latency_ms": 168.66,
-  "fps": 5.93,
+  "latency_ms": 16.43,
+  "fps": 60.87,
   "input_resolution": {
     "width": 1280,
     "height": 1024
@@ -17,22 +17,22 @@
   "model_parameters": 36911842,
   "metrics": {
     "ground_truth_real": 532,
-    "final_estimated_count": 874584.0,
-    "coarse_token_count": 0.72,
-    "total_picos_locais": 88,
-    "erro_absoluto_picos": 444,
-    "density_integral_raw": 874584.0,
-    "max_pixel_density": 0.717686
+    "final_estimated_count": 921372.19,
+    "coarse_token_count": 0.68,
+    "total_picos_locais": 82,
+    "erro_absoluto_picos": 450,
+    "density_integral_raw": 921372.1875,
+    "max_pixel_density": 0.774839
   },
   "metricas_validacao": {
-    "mse_pixelwise_mapa_2d": 0.445123,
-    "mse_contagem_integral": 763966898704.0,
-    "rmse_contagem_integral": 874052.0,
-    "mse_contagem_picos": 197136.0,
-    "rmse_contagem_picos": 444.0,
-    "nae_integral": 1642.9549,
-    "nae_picos": 0.8346,
-    "nae_picos_percentual": "83.5%"
+    "mse_pixelwise_mapa_2d": 0.493947,
+    "mse_contagem_integral": 847946650915.04,
+    "rmse_contagem_integral": 920840.19,
+    "mse_contagem_picos": 202500.0,
+    "rmse_contagem_picos": 450.0,
+    "nae_integral": 1730.9026,
+    "nae_picos": 0.8459,
+    "nae_picos_percentual": "84.6%"
   },
   "artifacts_generated": [
     "density_map.npy",
