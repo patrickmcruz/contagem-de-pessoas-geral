@@ -1,0 +1,36 @@
+# ==============================================================================
+# Gitignore local para count-github-def_rgbtcc
+# ==============================================================================
+
+# Resultados de processamento e modelos de todos os diretorios output/
+**/output/
+
+# Relatorios pesados gerados (PDFs de apresentacao e dashboards HTML com imagens embutidas)
+relatorios/apresentacao/pdf/
+relatorios/apresentacao/*.html
+
+# Pesos de modelos de Deep Learning
+weights/
+*.pt
+*.pth
+*.onnx
+*.weights
+*.safetensors
+*.bin
+*.ckpt
+
+# Arrays densos de dados (Mapas de densidade brutos)
+*.npy
+*.npz
+
+# Ambientes virtuais e caches
+.venv/
+app/.cache/
+app/.yolo/
+.ipynb_checkpoints/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/

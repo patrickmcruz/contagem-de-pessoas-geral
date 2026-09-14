@@ -36,3 +36,20 @@ brain/
 # Videos
 count-peoples-record/input/
 count-peoples-record/output/
+SECOM - DRONE/
+
+# count-github-def_rgbtcc (Resultados de todos os output/ e big files - exceto input/)
+count-github-def_rgbtcc/**/output/
+count-github-def_rgbtcc/relatorios/apresentacao/pdf/
+count-github-def_rgbtcc/relatorios/apresentacao/*.html
+count-github-def_rgbtcc/weights/
+count-github-def_rgbtcc/app/.cache/
+count-github-def_rgbtcc/app/.yolo/
+
+# Large scientific data files & checkpoints
+*.npy
+*.npz
+*.safetensors
+*.bin
+*.ckpt
+.ipynb_checkpoints/
