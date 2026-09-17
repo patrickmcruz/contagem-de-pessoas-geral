@@ -1,11 +1,11 @@
 {
   "status": "finalizado",
-  "data_finalizacao": "2026-09-11 10:30:07",
-  "imagem_origem": "notebooks/DEF-rgbtcc/input/DJI_0789_W.JPG",
+  "data_finalizacao": "2026-09-17 10:03:51",
+  "imagem_origem": "/home/patrickcruz/Git/projects/contagem-de-pessoas/count-github-def_rgbtcc/data/input/DJI_0789_W.JPG",
   "arquivo_nome": "DJI_0789_W.JPG",
   "resolucao_original": {
-    "largura": 1715,
-    "altura": 992,
+    "largura": 8000,
+    "altura": 6000,
     "canais": 3
   },
   "total_pessoas_anotadas": 532,

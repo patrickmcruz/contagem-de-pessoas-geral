@@ -1,10 +1,10 @@
 {
-  "cena": "DJI_0789_W_DJI_0790_T",
-  "arquivo_origem": "notebooks/DEF-rgbtcc/output/ground_truth/pontos_ground_truth.json",
-  "resolucao_alinhada": {
-    "largura": 1280,
-    "altura": 1024
-  },
+  "cena": "DJI_0789_W",
+  "arquivo_origem": "DJI_0789_W.JPG",
+  "resolucao_alinhada": [
+    1280,
+    1024
+  ],
   "total_pessoas_anotadas": 532,
   "pontos": [
     {

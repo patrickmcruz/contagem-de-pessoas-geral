@@ -119,3 +119,11 @@ O maior ganho deste design modular é o **desacoplamento via contrato**:
 - **Onde mexer:** Apenas no **Notebook 02** (`02_contagem_pessoas_rgbtcc.ipynb`).
 - **Exemplos:** Testar modelos de detecção de caixas (YOLOv8-Crowd, RT-DETR) ou outros modelos de densidade (CSRNet, DM-Count, CLIP-ECount).
 - **Impacto no Notebook 01:** **Zero!** Você não precisa reprocessar nem recalcular as distorções da câmera; basta ler os arquivos que já foram equalizados.
+
+---
+
+## 4. Dossiê de Correção de Pesos e Calibração (Branch `feat/melhoria-contagem-notebook-02`)
+
+Para a explicação completa e formal sobre a causa raiz de subestimação no Notebook 02 (pesos de fallback, remoção do multiplicador arbitrário `0.0001` e ativação da fusão multimodal 50%/50%), consulte o dossiê técnico de defesa:
+👉 [`notebooks/DEF-rgbtcc/docs/RELATORIO_TECNICO_CORRECAO_CONTAGEM_NOTEBOOK_02.md`](../notebooks/DEF-rgbtcc/docs/RELATORIO_TECNICO_CORRECAO_CONTAGEM_NOTEBOOK_02.md)
+

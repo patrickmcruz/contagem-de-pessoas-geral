@@ -62,7 +62,7 @@ else:
 Para evitar problemas de falta de desfazer (*Undo*) ou anotações perdidas, criamos um script profissional completo localizado em:
 `scripts/anotar_pontos.py`
 
-- **Insumo padrão:** Imagem original óptica de altíssima resolução **`notebooks/DEF-rgbtcc/input/DJI_0789_W.JPG`** (8000x6000 px).
+- **Insumo padrão:** Imagem original óptica de altíssima resolução **`data/input/DJI_0789_W.JPG`** (8000x6000 px).
 - **HUD e marcadores auto-escaláveis:** O raio dos pontos e a interface superior se adaptam automaticamente para ficarem nítidos e confortáveis na tela em qualquer resolução de monitor.
 
 ### Como executar:

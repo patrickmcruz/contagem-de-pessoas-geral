@@ -12,16 +12,32 @@ Como a anotação pontual de cabeças é realizada visualmente sobre uma imagem 
 data/ground_truth/
 ├── README.md
 │
+├── DJI_0763_W/                                     # Imagem contada (2.826 pessoas reais)
+├── DJI_0765_W/                                     # Imagem contada (1.082 pessoas reais)
+├── DJI_0767_W/                                     # Imagem contada (1.842 pessoas reais)
+├── DJI_0779_W/                                     # Imagem contada (740 pessoas reais)
 ├── DJI_0789_W/                                     # Imagem contada (532 pessoas reais)
 │   ├── checkpoint_anotacao.json                    # Checkpoint em tempo real da anotação
-│   ├── pontos_ground_truth.json                    # Pontos e metadados no espaço RAW (8000x6000 px)
-│   ├── pontos_ground_truth.csv                     # Tabela CSV (id, x, y) no espaço RAW
+│   ├── pontos_ground_truth.json                    # Pontos e metadados no espaço nativo
+│   ├── pontos_ground_truth.csv                     # Tabela CSV (id, x, y) no espaço nativo
 │   ├── ground_truth_aligned_1280x1024.json         # Coordenadas projetadas no espaço de inferência (1280x1024 px)
-│   ├── rgb_anotada_ground_truth_DJI_0789_W.jpg     # Imagem original com pontos marcados (auditoria visual)
+│   ├── rgb_anotada_ground_truth_*.jpg              # Imagem original com pontos marcados (auditoria visual)
 │   └── metadados.json                              # Ficha técnica da imagem contada
 │
 └── ... (novas imagens contadas adicionadas dinamicamente)
 ```
+
+### Catálogo de Cenas Ground Truth Disponíveis
+
+| Cena / Stem | Origem | Resolução Nativa | Resolução Alinhada | Total Pessoas Reais |
+| :--- | :--- | :--- | :--- | :--- |
+| **`DJI_0763_W`** | `data/manual_counting_check/` | $1536 \times 1152$ | $1280 \times 1024$ | **2.826** cabeças |
+| **`DJI_0765_W`** | `data/manual_counting_check/` | $1536 \times 1152$ | $1280 \times 1024$ | **1.082** cabeças |
+| **`DJI_0767_W`** | `data/manual_counting_check/` | $1536 \times 1152$ | $1280 \times 1024$ | **1.842** cabeças |
+| **`DJI_0779_W`** | `data/manual_counting_check/` | $1536 \times 1152$ | $1280 \times 1024$ | **740** cabeças |
+| **`DJI_0789_W`** | `notebooks/DEF-rgbtcc/input/` | $8000 \times 6000$ | $1280 \times 1024$ | **532** cabeças |
+| **Total Acumulado** | **5 cenas** | - | - | **7.022 pessoas reais** |
+
 
 ---
 
@@ -46,7 +62,7 @@ Para iniciar ou continuar a contagem manual de qualquer imagem, execute o anotad
 
 ```bash
 ./notebooks/.venv/bin/python scripts/anotar_pontos.py \
-    --imagem notebooks/DEF-rgbtcc/input/DJI_0777_W.JPG
+    --imagem data/input/DJI_0789_W.JPG
 ```
 
 O script detecta o nome da imagem (`DJI_0777_W`) e cria/utiliza automaticamente a pasta:  
@@ -60,3 +76,20 @@ O script detecta o nome da imagem (`DJI_0777_W`) e cria/utiliza automaticamente 
 * **Botão Direito / [Ctrl + Z]:** Desfazer último ponto.
 * **[Ctrl + S] ou Botão [Salvar]:** Gravar checkpoint imediato.
 * **Tecla [F] ou Botão [Finalizar]:** Finalizar a sessão e gerar todos os entregáveis (CSV, JSONs, projeção 1280x1024 e Imagem anotada).
+
+---
+
+## 4. Como Importar Lotes de Contagem Manual (`data/manual_counting_check/`)
+
+Se você já possui anotações manuais pontuais em arquivos de texto (onde cada linha do `.txt` contém as coordenadas espaciais `X Y` correspondentes à imagem `.JPG`), utilize o importador automatizado:
+
+```bash
+./notebooks/.venv/bin/python scripts/importar_manual_ground_truth.py
+```
+
+Parâmetros opcionais:
+- `--input-dir`: Diretório com os pares imagem e `.txt` (padrão: `data/manual_counting_check`).
+- `--output-dir`: Diretório raiz de Ground Truth (padrão: `data/ground_truth`).
+- `--largura-alinhada`: Largura do espaço de inferência para projeção (padrão: `1280`).
+- `--altura-alinhada`: Altura do espaço de inferência para projeção (padrão: `1024`).
+
