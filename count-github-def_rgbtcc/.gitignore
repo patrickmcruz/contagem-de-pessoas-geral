@@ -4,6 +4,11 @@
 
 # Resultados de processamento e modelos de todos os diretorios output/
 **/output/
+!**/output/ground_truth
+
+# Proteger e versionar o Ground Truth (dados mestre de anotacao manual de cabecas)
+!data/ground_truth/
+!data/ground_truth/**
 
 # Relatorios pesados gerados (PDFs de apresentacao e dashboards HTML com imagens embutidas)
 relatorios/apresentacao/pdf/
