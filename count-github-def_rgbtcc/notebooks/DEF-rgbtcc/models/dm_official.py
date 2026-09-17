@@ -316,3 +316,4 @@ class OfficialDMWrapper(nn.Module):
             "density_map": dmap,
             "fusion_weight": w,
         }
+
