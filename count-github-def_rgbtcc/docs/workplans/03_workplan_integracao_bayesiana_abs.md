@@ -30,5 +30,5 @@ Além disso, a detecção de picos discretos em alta resolução deve utilizar l
   - Ajustar a janela de vizinhança de picos para `size=5` (adequada para raio de cabeça em drone).
 - [x] **Task 3.4:** Testar a integridade numérica e a consistência entre integral contínua e picos detectados em script automatizado.
 - [x] **Task 3.5:** Atualizar o `walkthrough.md` com os novos resultados e guia de execução.
-- [ ] **Task 3.6:** Entregar ao usuário para validação manual no Jupyter / VS Code.
-- [ ] **Task 3.7:** Após validação e aprovação do usuário, realizar o merge em `develop`.
+- [x] **Task 3.6:** Entregar ao usuário para validação manual no Jupyter / VS Code.
+- [x] **Task 3.7:** Após validação e aprovação do usuário, realizar o merge em `develop`.
