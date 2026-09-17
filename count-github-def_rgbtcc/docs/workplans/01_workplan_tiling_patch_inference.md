@@ -23,8 +23,8 @@ Este workplan implementa a **Inferência por Janelamento / Tiling (Patches)** di
 - [x] **Task 1.3:** Integrar a função nas células do notebook `02_contagem_pessoas_rgbtcc.ipynb` (Célula 9 e 10).
 - [x] **Task 1.4:** Testar a integridade matemática da costura (shape final `[1024, 1280]`, sem erros em todas as células).
 - [x] **Task 1.5:** Gerar o artefato `walkthrough.md` documentando as mudanças e fornecendo instruções claras para execução manual.
-- [ ] **Task 1.6:** Entregar ao usuário para validação manual no Jupyter / VS Code.
-- [ ] **Task 1.7:** Após validação e aprovação do usuário, realizar o merge em `develop`.
+- [x] **Task 1.6:** Entregar ao usuário para validação manual no Jupyter / VS Code.
+- [x] **Task 1.7:** Após validação e aprovação do usuário, realizar o merge em `develop`.
 
 ---
 
