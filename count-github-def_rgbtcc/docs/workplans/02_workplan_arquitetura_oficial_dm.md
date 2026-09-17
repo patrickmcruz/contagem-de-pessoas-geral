@@ -29,5 +29,7 @@ Este workplan porta a **arquitetura neural oficial completa** do paper (*A Dual-
 - [x] **Task 2.5:** Atualizar as Células 5 e 6 do notebook `02_contagem_pessoas_rgbtcc.ipynb` com seletor de arquitetura e telemetria de parâmetros.
 - [x] **Task 2.6:** Testar a inferência de ponta a ponta em script automatizado (GPU CUDA RTX 4090).
 - [x] **Task 2.7:** Atualizar o `walkthrough.md` com instruções detalhadas para o usuário.
+- [ ] **Task 2.8:** Entregar ao usuário para execução manual no Jupyter / VS Code.
+- [ ] **Task 2.9:** Após validação e aprovação do usuário, realizar o merge em `develop`.
 - [x] **Task 2.8:** Entregar ao usuário para execução manual no Jupyter / VS Code.
 - [x] **Task 2.9:** Após validação e aprovação do usuário, realizar o merge em `develop`.
