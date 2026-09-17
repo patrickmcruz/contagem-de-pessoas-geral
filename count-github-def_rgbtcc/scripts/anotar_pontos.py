@@ -35,7 +35,7 @@ import pandas as pd
 
 # Resolução de caminhos do projeto e diretório mestre de dados Ground Truth
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_IMAGE = PROJECT_ROOT / "notebooks" / "DEF-rgbtcc" / "input" / "DJI_0789_W.JPG"
+DEFAULT_IMAGE = PROJECT_ROOT / "data" / "input" / "DJI_0763_W.JPG"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "ground_truth"
 
 coordenadas = []
@@ -584,9 +584,13 @@ def main():
     # 2. Localização da imagem
     caminho_img = args.imagem
     if not caminho_img.exists():
+        fallback_def = PROJECT_ROOT / "notebooks" / "DEF-rgbtcc" / "input" / "DJI_0789_W.JPG"
         fallback_liu = Path("notebooks/liuzywen-RGBTCC/input/DJI_0789_W.JPG")
         fallback_pre = Path("notebooks/DEF-rgbtcc/output/01_pre_transformacao/rgb_preprocessed.jpg")
-        if fallback_liu.exists():
+        if fallback_def.exists():
+            print(f"[!] Usando fallback: {fallback_def}")
+            caminho_img = fallback_def
+        elif fallback_liu.exists():
             print(f"[!] Usando fallback: {fallback_liu}")
             caminho_img = fallback_liu
         elif fallback_pre.exists():
