@@ -1,6 +1,6 @@
 # Workplan 01: Inferência por Tiling / Mosaico de Patches (640x512)
 
-**Status:** Em Desenvolvimento  
+**Status:** Finalizado  
 **Branch:** `feat/01-tiling-patch-inference`  
 **Prioridade:** 1º Lugar (Impacto Crítico - Resolução de Sub-pixel e Colapso de Escala)  
 **Notebook Alvo:** `notebooks/DEF-rgbtcc/02_contagem_pessoas_rgbtcc.ipynb`  
