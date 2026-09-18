@@ -168,3 +168,53 @@ def predict_tiled_density(
         "num_patches": patch_idx,
         "mean_fusion_weight": float(np.mean(fusion_weights)) if fusion_weights else 0.50,
     }
+
+
+def suppress_background_noise(
+    density_map: np.ndarray,
+    border_margin: int = 8,
+    cutoff_ratio: float = 0.05,
+) -> Tuple[np.ndarray, Dict[str, float]]:
+    """Aplica supressão de ruído residual de fundo e neutralização de artefatos de borda.
+
+    Args:
+        density_map: Mapa de densidade 2D [H, W] (numpy array).
+        border_margin: Margem em pixels a ser zerada nas bordas da imagem para
+                       eliminar artefatos de padding de convolução (padrão: 8px).
+        cutoff_ratio: Fração da densidade máxima abaixo da qual os valores são
+                      zerados como ruído difuso de fundo (padrão: 0.05 ou 5%).
+
+    Returns:
+        dmap_clean: Mapa de densidade limpo [H, W].
+        stats: Dicionário com métricas de ruído neutralizado e percentual de área zerada.
+    """
+    dmap_clean = density_map.copy().astype(np.float32)
+    raw_sum = float(np.sum(dmap_clean))
+    d_max = float(np.max(dmap_clean))
+
+    # 1. Neutralizar reflexões de borda de convolução
+    if border_margin > 0:
+        h, w = dmap_clean.shape
+        dmap_clean[:border_margin, :] = 0.0
+        dmap_clean[h - border_margin:, :] = 0.0
+        dmap_clean[:, :border_margin] = 0.0
+        dmap_clean[:, w - border_margin:] = 0.0
+
+    # 2. Limiarização do piso de ruído difuso em áreas vazias (asfalto, grama)
+    if cutoff_ratio > 0.0 and d_max > 0.0:
+        cutoff = cutoff_ratio * d_max
+        dmap_clean[dmap_clean < cutoff] = 0.0
+
+    clean_sum = float(np.sum(dmap_clean))
+    suppressed_count = raw_sum - clean_sum
+    zero_ratio = float(np.mean(dmap_clean == 0.0) * 100.0)
+
+    stats = {
+        "raw_sum": raw_sum,
+        "clean_sum": clean_sum,
+        "suppressed_count": suppressed_count,
+        "zero_area_percent": zero_ratio,
+        "cutoff_threshold": cutoff_ratio * d_max if d_max > 0 else 0.0,
+    }
+    return dmap_clean, stats
+
