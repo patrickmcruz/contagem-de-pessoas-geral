@@ -37,3 +37,4 @@ Na cena de drone `DJI_0763_W` (Ground Truth: **2.826 pessoas**):
 > **Impacto Principal:**
 > O erro NAE caiu para impressionantes **22.6%** (redução de 53.2 pontos percentuais em relação à baseline original).
 > O valor integrado de **3.465 pessoas** opera pela primeira vez na mesma ordem de grandeza do Ground Truth humano (**2.826 pessoas**), com ativação multimodal balanceada (46.5% RGB e 53.5% Térmica) e inferência em 275 ms (3.6 FPS em GPU RTX 4090).
+

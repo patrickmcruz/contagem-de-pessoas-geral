@@ -28,3 +28,4 @@ Nesta primeira etapa (1º Lugar em Impacto), atacamos o **colapso de escala** de
   * *Patch 3 (Bottom-Left):* 159.73 pessoas
   * *Patch 4 (Bottom-Right):* 224.18 pessoas
 * **Contagem Total Tiled:** 698.64 pessoas.
+
