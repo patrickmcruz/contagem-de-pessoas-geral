@@ -1,0 +1,24 @@
+{
+  "imagem_contada": "DJI_0763_W",
+  "imagem_rgb": "DJI_0763_W.JPG",
+  "status_anotacao": "finalizado",
+  "data_finalizacao": "2026-09-17 09:53:37",
+  "total_pessoas_anotadas": 2826,
+  "resolucao_raw": {
+    "rgb": [
+      1536,
+      1152
+    ]
+  },
+  "resolucao_alinhada_inferencia": [
+    1280,
+    1024
+  ],
+  "arquivos": {
+    "checkpoint": "checkpoint_DJI_0763_W.json",
+    "pontos_raw_json": "pontos_ground_truth_DJI_0763_W.json",
+    "pontos_raw_csv": "pontos_ground_truth_DJI_0763_W.csv",
+    "pontos_alinhados_json": "ground_truth_aligned_1280x1024_DJI_0763_W.json",
+    "auditoria_visual_jpg": "rgb_anotada_ground_truth_DJI_0763_W.jpg"
+  }
+}

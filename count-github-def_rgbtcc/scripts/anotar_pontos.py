@@ -33,9 +33,10 @@ import cv2
 import numpy as np
 import pandas as pd
 
-# Caminhos padrão do projeto (Imagem óptica original 8000x6000 px)
-DEFAULT_IMAGE = Path("notebooks/DEF-rgbtcc/input/DJI_0789_W.JPG")
-DEFAULT_OUTPUT_DIR = Path("notebooks/DEF-rgbtcc/output/ground_truth")
+# Resolução de caminhos do projeto e diretório mestre de dados Ground Truth
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_IMAGE = PROJECT_ROOT / "data" / "input" / "DJI_0763_W.JPG"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "ground_truth"
 
 coordenadas = []
 img_base = None             # Imagem original 8000x6000 em memória
@@ -196,16 +197,13 @@ def salvar_checkpoint(silencioso: bool = False):
     caminho_saida_ativo.mkdir(parents=True, exist_ok=True)
     stem = caminho_img_ativo.stem
     p_csv_stem = caminho_saida_ativo / f"pontos_ground_truth_{stem}.csv"
-    p_csv_default = caminho_saida_ativo / "pontos_ground_truth.csv"
     p_json_stem = caminho_saida_ativo / f"checkpoint_{stem}.json"
-    p_json_default = caminho_saida_ativo / "checkpoint_anotacao.json"
 
-    # Salva CSV
+    # Salva CSV com nome da imagem base
     df = pd.DataFrame(coordenadas)
     df.to_csv(p_csv_stem, index=False)
-    df.to_csv(p_csv_default, index=False)
 
-    # Salva JSON de Checkpoint
+    # Salva JSON de Checkpoint com nome da imagem base
     checkpoint_data = {
         "tipo": "checkpoint_progresso",
         "data_checkpoint": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -219,8 +217,6 @@ def salvar_checkpoint(silencioso: bool = False):
         "pontos": coordenadas,
     }
     with open(p_json_stem, "w", encoding="utf-8") as f:
-        json.dump(checkpoint_data, f, indent=2, ensure_ascii=False)
-    with open(p_json_default, "w", encoding="utf-8") as f:
         json.dump(checkpoint_data, f, indent=2, ensure_ascii=False)
 
     hora_str = time.strftime("%H:%M:%S")
@@ -588,9 +584,13 @@ def main():
     # 2. Localização da imagem
     caminho_img = args.imagem
     if not caminho_img.exists():
+        fallback_def = PROJECT_ROOT / "notebooks" / "DEF-rgbtcc" / "input" / "DJI_0789_W.JPG"
         fallback_liu = Path("notebooks/liuzywen-RGBTCC/input/DJI_0789_W.JPG")
         fallback_pre = Path("notebooks/DEF-rgbtcc/output/01_pre_transformacao/rgb_preprocessed.jpg")
-        if fallback_liu.exists():
+        if fallback_def.exists():
+            print(f"[!] Usando fallback: {fallback_def}")
+            caminho_img = fallback_def
+        elif fallback_liu.exists():
             print(f"[!] Usando fallback: {fallback_liu}")
             caminho_img = fallback_liu
         elif fallback_pre.exists():
@@ -616,12 +616,17 @@ def main():
     thumb_h = int(round(180 * (h_orig / w_orig)))
     img_thumb = cv2.resize(img_base, (thumb_w, thumb_h), interpolation=cv2.INTER_AREA)
 
+    # Subdiretório específico para a imagem contada se apontado para a raiz ground_truth
+    stem = caminho_img.stem
+    if args.saida.name == "ground_truth":
+        args.saida = args.saida / stem
+
     caminho_img_ativo = caminho_img
     caminho_saida_ativo = args.saida
     args.saida.mkdir(parents=True, exist_ok=True)
+    print(f"[*] Diretório de Ground Truth da imagem: {args.saida}")
 
     # 3. Continuação automática: Recupera anotações existentes
-    stem = caminho_img.stem
     p_csv_stem = args.saida / f"pontos_ground_truth_{stem}.csv"
     p_chk_stem = args.saida / f"checkpoint_{stem}.json"
 
@@ -748,17 +753,16 @@ def main():
     # Exportação Final dos Entregáveis (Executada ao Finalizar)
     # --------------------------------------------------------------------------
     p_csv_stem = args.saida / f"pontos_ground_truth_{stem}.csv"
-    p_csv_default = args.saida / "pontos_ground_truth.csv"
     p_json_stem = args.saida / f"pontos_ground_truth_{stem}.json"
-    p_json_default = args.saida / "pontos_ground_truth.json"
+    p_json_aligned = args.saida / f"ground_truth_aligned_1280x1024_{stem}.json"
     p_img = args.saida / f"rgb_anotada_ground_truth_{stem}.jpg"
+    p_meta = args.saida / f"metadados_{stem}.json"
 
     # 1. Salvar CSV
     df = pd.DataFrame(coordenadas)
     df.to_csv(p_csv_stem, index=False)
-    df.to_csv(p_csv_default, index=False)
 
-    # 2. Salvar JSON
+    # 2. Salvar JSON de Pontos RAW
     telemetria_gt = {
         "status": "finalizado",
         "data_finalizacao": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -774,8 +778,6 @@ def main():
     }
     with open(p_json_stem, "w", encoding="utf-8") as f:
         json.dump(telemetria_gt, f, indent=2, ensure_ascii=False)
-    with open(p_json_default, "w", encoding="utf-8") as f:
-        json.dump(telemetria_gt, f, indent=2, ensure_ascii=False)
 
     # 3. Salvar Imagem Anotada em Alta Resolução
     print("[*] Gravando imagem final anotada com os pontos na resolução original de 8000x6000...")
@@ -786,14 +788,59 @@ def main():
         cv2.circle(img_anotada_orig, (pt["x"], pt["y"]), raio_orig + 2, (0, 255, 255), 2)
     cv2.imwrite(str(p_img), img_anotada_orig)
 
+    # 4. Salvar Ground Truth Projetado no Espaço de Inferência (1280x1024)
+    pontos_aligned = []
+    scale_x = 1280.0 / float(w_orig)
+    scale_y = 1024.0 / float(h_orig)
+    for pt in coordenadas:
+        px = int(round(pt["x"] * scale_x))
+        py = int(round(pt["y"] * scale_y))
+        pontos_aligned.append({"id": pt["id"], "x": px, "y": py})
+
+    gt_aligned_data = {
+        "cena": caminho_img.stem,
+        "arquivo_origem": caminho_img.name,
+        "resolucao_alinhada": [1280, 1024],
+        "total_pessoas_anotadas": len(pontos_aligned),
+        "pontos": pontos_aligned,
+    }
+    with open(p_json_aligned, "w", encoding="utf-8") as f:
+        json.dump(gt_aligned_data, f, indent=2, ensure_ascii=False)
+
+    # 5. Salvar Metadados da Imagem Contada
+    meta_info = {
+        "imagem_contada": stem,
+        "imagem_rgb": caminho_img.name,
+        "status_anotacao": "finalizado",
+        "data_finalizacao": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "total_pessoas_anotadas": len(coordenadas),
+        "resolucao_raw": {
+            "largura": int(img_base.shape[1]),
+            "altura": int(img_base.shape[0]),
+            "canais": int(img_base.shape[2]) if len(img_base.shape) > 2 else 1,
+        },
+        "resolucao_alinhada_inferencia": [1280, 1024],
+        "arquivos": {
+            "checkpoint": f"checkpoint_{stem}.json",
+            "pontos_raw_json": p_json_stem.name,
+            "pontos_raw_csv": p_csv_stem.name,
+            "pontos_alinhados_json": p_json_aligned.name,
+            "auditoria_visual_jpg": p_img.name,
+        },
+    }
+    with open(p_meta, "w", encoding="utf-8") as f:
+        json.dump(meta_info, f, indent=2, ensure_ascii=False)
+
     print("\n" + "=" * 76)
     print("       CONTAGEM FINALIZADA E ENTREGÁVEIS GERADOS COM SUCESSO")
     print("=" * 76)
     print(f"  [✓] Imagem Base Utilizada:     {caminho_img.name} ({w_orig}x{h_orig} px)")
     print(f"  [✓] Total de Pessoas Anotadas: {len(coordenadas)}")
-    print(f"  [✓] Tabela CSV de Coordenadas: {p_csv_stem}")
-    print(f"  [✓] Metadados e Pontos JSON:   {p_json_stem}")
-    print(f"  [✓] Imagem com Auditoria GT:   {p_img}")
+    print(f"  [✓] Tabela CSV de Coordenadas: {p_csv_stem.name}")
+    print(f"  [✓] Metadados e Pontos JSON:   {p_json_stem.name}")
+    print(f"  [✓] GT Alinhado (1280x1024):   {p_json_aligned.name}")
+    print(f"  [✓] Metadados Ficha Técnica:   {p_meta.name}")
+    print(f"  [✓] Imagem com Auditoria GT:   {p_img.name}")
     print("=" * 76 + "\n")
 
 
