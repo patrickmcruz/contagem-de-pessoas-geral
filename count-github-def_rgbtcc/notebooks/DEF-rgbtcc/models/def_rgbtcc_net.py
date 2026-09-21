@@ -206,45 +206,112 @@ class DEFRGBTCCNet(nn.Module):
         }
 
 
+class DualStreamRGBTWrapper(nn.Module):
+    """Wrapper para compatibilidade de interface com DEFRGBTCCNet."""
+
+    def __init__(self, net: nn.Module):
+        super().__init__()
+        self.net = net
+
+    def forward(self, rgb: torch.Tensor, thermal: torch.Tensor) -> Dict[str, torch.Tensor]:
+        dmap = self.net(rgb, thermal)
+        return {
+            "density_map": dmap,
+            "fusion_weight": torch.tensor(0.50, device=rgb.device),
+        }
+
+
 def build_def_rgbtcc_model(
     weight_path: Optional[Union[str, Path]] = None,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
+    architecture: str = "auto",
 ) -> nn.Module:
-    """Constructs the DEF-rgbtcc model and loads trained weights if available.
+    """Constrói o modelo DEF-rgbtcc (Oficial do Paper ou DualStream) e carrega pesos.
 
     Args:
-        weight_path: Optional path to model weights (.pth / .pt / .safetensors).
-        device: Target execution device ('cuda' or 'cpu').
+        weight_path: Caminho opcional para arquivo de pesos (.pth / .pt).
+        device: Dispositivo de execução ('cuda' ou 'cpu').
+        architecture: Opção de arquitetura:
+            - 'auto': Seleciona com base no checkpoint ou usa official_dm como fallback.
+            - 'official_dm': Arquitetura oficial do artigo (VGG-19 + SMA + AFM + Abs).
+            - 'dual_stream': Rede leve DualStreamRGBTNet calibrada para cenas compactas.
 
     Returns:
-        model: Initialized DEFRGBTCCNet model in evaluation mode (eval).
+        model: Instância do modelo em modo eval().
     """
     device_obj = torch.device(device if torch.cuda.is_available() else "cpu")
-    model = DEFRGBTCCNet(pretrained_backbone=True)
 
-    loaded = False
+    # Se o usuário solicitou explicitamente a arquitetura oficial do paper
+    if architecture == "official_dm":
+        from .dm_official import Net as OfficialNet, OfficialDMWrapper
+        logger.info("[build_def_rgbtcc_model] Construindo arquitetura oficial DEF-rgbtcc (arXiv:2509.17079)...")
+        net = OfficialNet(pretrained_backbone=True)
+        if weight_path and os.path.exists(weight_path):
+            try:
+                ckpt = torch.load(weight_path, map_location=device_obj)
+                sd = ckpt.get("model", ckpt) if isinstance(ckpt, dict) else ckpt
+                if any(k.startswith("features.") for k in sd.keys()):
+                    net.load_state_dict(sd, strict=False)
+                    logger.info(f"[build_def_rgbtcc_model] Pesos carregados com sucesso no Net oficial de {weight_path}")
+            except Exception as e:
+                logger.warning(f"[build_def_rgbtcc_model] Aviso ao carregar pesos no Net oficial: {e}")
+        model = OfficialDMWrapper(net)
+        model.to(device_obj)
+        model.eval()
+        return model
+
+    # Busca automática de checkpoint caso nenhum seja fornecido
+    if not weight_path or not os.path.exists(weight_path):
+        candidatos = [
+            Path(__file__).resolve().parent.parent.parent.parent / "weights" / "best_model.pth",
+            Path("weights/best_model.pth"),
+            Path("../weights/best_model.pth"),
+        ]
+        for c in candidatos:
+            if c.exists():
+                weight_path = str(c)
+                break
+
     if weight_path and os.path.exists(weight_path):
         logger.info(f"[build_def_rgbtcc_model] Loading checkpoint from: {weight_path}")
         try:
             checkpoint = torch.load(weight_path, map_location=device_obj)
             state_dict = checkpoint.get("model", checkpoint) if isinstance(checkpoint, dict) else checkpoint
-            model.load_state_dict(state_dict, strict=False)
-            logger.info("[build_def_rgbtcc_model] Weights loaded successfully!")
-            loaded = True
+            arch = checkpoint.get("architecture", "") if isinstance(checkpoint, dict) else ""
+
+            # Se for o checkpoint calibrado DualStreamRGBTNet
+            if arch == "DualStreamRGBTNet" or (isinstance(state_dict, dict) and any(k.startswith("rgb_enc") for k in state_dict.keys())):
+                from .models import DualStreamRGBTNet
+                base_net = DualStreamRGBTNet()
+                base_net.load_state_dict(state_dict, strict=True)
+                model = DualStreamRGBTWrapper(base_net)
+                model.to(device_obj)
+                model.eval()
+                logger.info(f"[build_def_rgbtcc_model] Pesos calibrados 'DualStreamRGBTNet' carregados com sucesso de {weight_path}!")
+                return model
+            elif any(k.startswith("features.") for k in state_dict.keys()):
+                from .dm_official import Net as OfficialNet, OfficialDMWrapper
+                net = OfficialNet(pretrained_backbone=True)
+                net.load_state_dict(state_dict, strict=False)
+                model = OfficialDMWrapper(net)
+                model.to(device_obj)
+                model.eval()
+                logger.info(f"[build_def_rgbtcc_model] Pesos carregados na arquitetura oficial dm_official de {weight_path}!")
+                return model
+            else:
+                model = DEFRGBTCCNet(pretrained_backbone=True)
+                model.load_state_dict(state_dict, strict=False)
+                model.to(device_obj)
+                model.eval()
+                logger.info("[build_def_rgbtcc_model] Weights loaded successfully into DEFRGBTCCNet!")
+                return model
         except Exception as e:
-            logger.warning(f"[build_def_rgbtcc_model] Checkpoint load warning: {e}. Using calibrated weights.")
+            logger.warning(f"[build_def_rgbtcc_model] Checkpoint load warning: {e}. Falling back to default.")
 
-    if not loaded:
-        logger.info("[build_def_rgbtcc_model] Operating with pre-trained VGG-19 backbone & calibrated initialization.")
-        for m in model.modules():
-            if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-            elif isinstance(m, (nn.BatchNorm2d, nn.LayerNorm)):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
+    logger.info("[build_def_rgbtcc_model] Operating with official DEF-rgbtcc architecture & pre-trained VGG-19 backbone.")
+    from .dm_official import Net as OfficialNet, OfficialDMWrapper
+    net = OfficialNet(pretrained_backbone=True)
+    model = OfficialDMWrapper(net)
     model.to(device_obj)
     model.eval()
     return model

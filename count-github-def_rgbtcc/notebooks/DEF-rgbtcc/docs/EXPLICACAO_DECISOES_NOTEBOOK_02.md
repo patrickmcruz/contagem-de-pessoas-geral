@@ -200,3 +200,11 @@
   - **Conexão Técnica:** A persistência da matriz densa contínua `density_map.npy` em precisão total (`float32`) é essencial para que rotinas automatizadas de validação calculem o erro absoluto em diferentes níveis de grade regional ($GAME(0), GAME(1), GAME(2), GAME(3)$) dividindo o mapa em $4^L$ blocos, exatamente como exige o protocolo de avaliação do artigo científico.
 - **Argumento para o Time:**  
   *"Exportamos matrizes NumPy para validação matemática estrita das métricas do artigo (GAME), imagens de alta definição para auditoria humana e JSON estruturado para consumo direto por APIs de produção."*
+
+---
+
+## 11. Referência Adicional: Resolução e Alinhamento de Contagem (Branch `feat/melhoria-contagem-notebook-02`)
+
+Para a análise aprofundada da causa raiz sobre as execuções preliminares (pesos de fallback, remoção do multiplicador arbitrário `0.0001` e restauração da fusão multimodal 50%/50%), consulte o dossiê dedicado:
+👉 [`RELATORIO_TECNICO_CORRECAO_CONTAGEM_NOTEBOOK_02.md`](RELATORIO_TECNICO_CORRECAO_CONTAGEM_NOTEBOOK_02.md)
+
