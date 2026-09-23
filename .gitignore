@@ -53,3 +53,8 @@ count-github-def_rgbtcc/app/.yolo/
 *.bin
 *.ckpt
 .ipynb_checkpoints/
+
+# Windows System Files
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
